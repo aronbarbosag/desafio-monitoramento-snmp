@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager, suppress
 
 from fastapi import FastAPI
 
+from api.routers.devices import router as devices_router
 from composer.registry_metric_catalog import seed_metric_catalog
 from composer.registry_metrics_collection import run_forever
 from infra.database.db_connection_handler import db_connection_handler
@@ -23,6 +24,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(title="SNMP Monitor", lifespan=lifespan)
+app.include_router(devices_router)
 
 
 @app.get("/health")

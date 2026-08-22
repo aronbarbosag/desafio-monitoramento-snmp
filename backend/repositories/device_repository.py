@@ -17,6 +17,12 @@ class DeviceRepository:
         self._session.flush()
         return devices
 
+    def list_all(self) -> list[Device]:
+        return self._session.query(Device).all()
+
+    def get_by_id(self, device_id: int) -> Device | None:
+        return self._session.get(Device, device_id)
+
     def list_by_subnet(self, subnet_id: int) -> list[Device]:
         return self._session.query(Device).filter(Device.subnet_id == subnet_id).all()
 

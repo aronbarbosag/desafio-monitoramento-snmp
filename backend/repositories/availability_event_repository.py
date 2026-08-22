@@ -35,3 +35,14 @@ class AvailabilityEventRepository:
         self._session.add(event)
         self._session.flush()
         return event
+
+    def list_by_device(self, device_id: int, limit: int) -> list[AvailabilityEvent]:
+        """Eventos mais recentes primeiro (o em aberto, se houver, vem sempre
+        primeiro por ter o started_at mais recente)."""
+        return (
+            self._session.query(AvailabilityEvent)
+            .filter(AvailabilityEvent.device_id == device_id)
+            .order_by(AvailabilityEvent.started_at.desc())
+            .limit(limit)
+            .all()
+        )
