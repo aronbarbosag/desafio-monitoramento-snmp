@@ -4,7 +4,10 @@ from contextlib import contextmanager
 from sqlalchemy import Engine
 from sqlalchemy.orm import Session
 
+from settings.config import DATABASE_URL
+
 from .i_connection_strategy import IConnectionStrategy
+from .postgres_connection_handler import PostgresConnectionStrategy
 from .sqlite_connection_handler import SQLiteConnectionStrategy
 
 
@@ -41,4 +44,11 @@ class DatabaseConnectionHandler:
         self._engine.dispose()
 
 
-db_connection_handler = DatabaseConnectionHandler(SQLiteConnectionStrategy())
+def _default_strategy() -> IConnectionStrategy:
+    """Postgres se DATABASE_URL estiver configurada, senão SQLite local."""
+    if DATABASE_URL:
+        return PostgresConnectionStrategy(DATABASE_URL)
+    return SQLiteConnectionStrategy()
+
+
+db_connection_handler = DatabaseConnectionHandler(_default_strategy())

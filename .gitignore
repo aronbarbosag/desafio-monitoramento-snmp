@@ -12,3 +12,7 @@ wheels/
 # Banco de dados local (artefato de runtime)
 *.db
 .pytest_cache/
+*.docx
+
+# Segredos locais (connection string do Postgres, etc.)
+.env
