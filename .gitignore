@@ -16,3 +16,6 @@ wheels/
 
 # Segredos locais (connection string do Postgres, etc.)
 .env
+.claude/
+CLAUDE.md
+graphify-out/
