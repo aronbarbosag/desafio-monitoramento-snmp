@@ -22,6 +22,29 @@ class HostResourcesOID(StrEnum):
     não suportada, não como device offline."""
 
     HR_CPU_LOAD = "1.3.6.1.2.1.25.3.3.1.2.1"
+    # hrPrinterDetectedErrorState do hrDeviceIndex 1 — índice fixo (mesma
+    # simplificação do HR_CPU_LOAD acima). Confirmado por SNMP walk real
+    # contra uma impressora Epson: hrDeviceIndex 1 é sempre a entrada do tipo
+    # hrDevicePrinter quando o device SÓ tem uma impressora física.
+    HR_PRINTER_DETECTED_ERROR_STATE = "1.3.6.1.2.1.25.3.5.1.2.1"
+
+
+class PrinterOID(StrEnum):
+    """Printer MIB (RFC 3805) — métricas específicas de impressora.
+
+    prtMarkerSuppliesLevel é uma TABELA (um nível por suprimento — toner,
+    cores de tinta etc.), não um escalar. O catálogo atual só suporta GET
+    fixo (sem walk de tabela), então os 4 primeiros índices ficam
+    hardcoded — cobre o caso real validado (impressora com 4 cartuchos de
+    tinta: preto/ciano/magenta/amarelo). Em devices com menos suprimentos,
+    os índices excedentes voltam NoSuchInstance e são descartados como
+    métrica não suportada (mesmo tratamento do HR_CPU_LOAD em switches)."""
+
+    MARKER_LIFE_COUNT = "1.3.6.1.2.1.43.10.2.1.4.1.1"
+    MARKER_SUPPLIES_LEVEL_1 = "1.3.6.1.2.1.43.11.1.1.9.1.1"
+    MARKER_SUPPLIES_LEVEL_2 = "1.3.6.1.2.1.43.11.1.1.9.1.2"
+    MARKER_SUPPLIES_LEVEL_3 = "1.3.6.1.2.1.43.11.1.1.9.1.3"
+    MARKER_SUPPLIES_LEVEL_4 = "1.3.6.1.2.1.43.11.1.1.9.1.4"
 
 
 class MetricTemplate(NamedTuple):
@@ -50,6 +73,47 @@ METRIC_CATALOG: list[MetricTemplate] = [
         oid=HostResourcesOID.HR_CPU_LOAD,
         name="CPU Load",
         value_type=MetricValueType.GAUGE,
+        unit="%",
+    ),
+    MetricTemplate(
+        key="printer_error_state",
+        oid=HostResourcesOID.HR_PRINTER_DETECTED_ERROR_STATE,
+        name="Printer Detected Error State",
+        value_type=MetricValueType.STRING,
+    ),
+    MetricTemplate(
+        key="printer_page_count",
+        oid=PrinterOID.MARKER_LIFE_COUNT,
+        name="Printer Marker Life Count",
+        value_type=MetricValueType.COUNTER,
+        unit="pages",
+    ),
+    MetricTemplate(
+        key="printer_supply_level_1",
+        oid=PrinterOID.MARKER_SUPPLIES_LEVEL_1,
+        name="Marker Supply 1 Level",
+        value_type=MetricValueType.INTEGER,
+        unit="%",
+    ),
+    MetricTemplate(
+        key="printer_supply_level_2",
+        oid=PrinterOID.MARKER_SUPPLIES_LEVEL_2,
+        name="Marker Supply 2 Level",
+        value_type=MetricValueType.INTEGER,
+        unit="%",
+    ),
+    MetricTemplate(
+        key="printer_supply_level_3",
+        oid=PrinterOID.MARKER_SUPPLIES_LEVEL_3,
+        name="Marker Supply 3 Level",
+        value_type=MetricValueType.INTEGER,
+        unit="%",
+    ),
+    MetricTemplate(
+        key="printer_supply_level_4",
+        oid=PrinterOID.MARKER_SUPPLIES_LEVEL_4,
+        name="Marker Supply 4 Level",
+        value_type=MetricValueType.INTEGER,
         unit="%",
     ),
 ]

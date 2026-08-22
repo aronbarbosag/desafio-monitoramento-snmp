@@ -19,3 +19,6 @@ wheels/
 .claude/
 CLAUDE.md
 graphify-out/
+
+# Checkpoint de sessão (contexto pra retomar entre sessões) — não sobe pro repo
+backend/docs/CHECKPOINT.md
