@@ -45,3 +45,10 @@ class MetricDefinitionRepository:
 
     def list_all(self) -> list[MetricDefinition]:
         return self._session.query(MetricDefinition).all()
+
+    def list_static(self) -> list[MetricDefinition]:
+        """Só o catálogo estático (oid real, semeado por upsert_catalog) —
+        exclui os placeholders oid="dynamic" criados por get_or_create.
+        MetricsCollectionService monta um GET SNMP a partir do oid de cada
+        definição; um oid "dynamic" faz o pysnmp explodir tentando resolvê-lo."""
+        return self._session.query(MetricDefinition).filter(MetricDefinition.oid != "dynamic").all()

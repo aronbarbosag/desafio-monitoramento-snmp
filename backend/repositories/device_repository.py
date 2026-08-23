@@ -17,6 +17,26 @@ class DeviceRepository:
         self._session.flush()
         return devices
 
+    def upsert_many_by_mac(self, devices: list[Device]) -> list[Device]:
+        """Como save_many, mas casando por mac: se já existe um Device com
+        esse mac, atualiza ip/vendor/subnet_id (podem mudar por DHCP/troca de
+        rede) na linha existente em vez de criar uma nova — preserva
+        status/backoff/identidade SNMP. mac é a identidade física do
+        aparelho (IP não é, muda por DHCP)."""
+        result = []
+        for incoming in devices:
+            existing = self._session.query(Device).filter_by(mac=incoming.mac).one_or_none()
+            if existing is None:
+                self._session.add(incoming)
+                result.append(incoming)
+                continue
+            existing.ip = incoming.ip
+            existing.vendor = incoming.vendor
+            existing.subnet_id = incoming.subnet_id
+            result.append(existing)
+        self._session.flush()
+        return result
+
     def list_all(self) -> list[Device]:
         return self._session.query(Device).all()
 
@@ -27,15 +47,10 @@ class DeviceRepository:
         return self._session.query(Device).filter(Device.subnet_id == subnet_id).all()
 
     def list_due_for_poll(self, now: datetime) -> list[Device]:
-        """Devices SNMP-capable (identificados pelo SnmpScanService) cujo
-        next_poll_at já venceu — os únicos que o MetricsCollectionService
-        sabe como sondar."""
-        return (
-            self._session.query(Device)
-            .filter(Device.snmp_community.isnot(None))
-            .filter(Device.next_poll_at <= now)
-            .all()
-        )
+        """Todo device (SNMP-capable ou não) cujo next_poll_at já venceu —
+        o PingService sabe sondar qualquer um; só quem tem snmp_supported
+        também passa pelo MetricsCollectionService."""
+        return self._session.query(Device).filter(Device.next_poll_at <= now).all()
 
     def record_poll_result(
         self,

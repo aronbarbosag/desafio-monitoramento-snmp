@@ -34,24 +34,25 @@ class MetricReading:
 @dataclass(frozen=True)
 class DevicePollResult:
     device_id: int
-    online: bool
     readings: list[MetricReading]
 
 
 class MetricsCollectionService:
     """
-    Recebe devices já conhecidos como SNMP-capable (snmp_community setado pelo
-    SnmpScanService) e o catálogo de métricas, faz um GET em bloco (todos os OIDs
-    do catálogo numa única PDU) por device.
+    Recebe devices já conhecidos como SNMP-capable (snmp_supported=True) e o
+    catálogo de métricas, faz um GET em bloco (todos os OIDs do catálogo numa
+    única PDU) por device — só pra coletar métricas. Quem decide disponibilidade
+    (status/backoff) é o PingService; um GET que falhar aqui só significa "sem
+    métricas nesse ciclo", nunca marca o device como offline.
 
     Não fala com o banco: devolve resultados puros, cabe ao composer decidir o
-    que fazer com sucesso/falha (backoff, MetricHistory, AvailabilityEvent) —
-    mesma separação usada no SnmpScanService.
+    que fazer com as leituras (MetricHistory) — mesma separação usada no
+    SnmpScanService.
 
     Um OID não suportado pelo device (ex: Host Resources MIB numa impressora)
     aparece como NoSuchObject/NoSuchInstance só naquele var-bind — a métrica é
-    descartada da leitura, sem marcar o device inteiro como offline. Só a
-    ausência de resposta na PDU inteira (timeout, community errada) é falha.
+    descartada da leitura. A ausência de resposta na PDU inteira (timeout,
+    community errada) simplesmente resulta em readings vazio.
     """
 
     def __init__(self):
@@ -78,14 +79,14 @@ class MetricsCollectionService:
             )
 
         if error_indication or error_status:
-            return DevicePollResult(device_id=device.id, online=False, readings=[])
+            return DevicePollResult(device_id=device.id, readings=[])
 
         readings = [
             MetricReading(metric_definition_id=metric_def.id, raw_value=str(value))
             for metric_def, (_oid, value) in zip(metric_defs, var_binds, strict=True)
             if not isinstance(value, _UNSUPPORTED_VALUE_TYPES)
         ]
-        return DevicePollResult(device_id=device.id, online=True, readings=readings)
+        return DevicePollResult(device_id=device.id, readings=readings)
 
     async def execute(
         self,

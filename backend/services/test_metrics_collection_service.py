@@ -25,7 +25,7 @@ def _fake_device(ip: str, community: str = "public") -> Device:
 
 
 @pytest.mark.asyncio
-async def test_poll_unreachable_device_is_reported_offline():
+async def test_poll_unreachable_device_returns_no_readings():
     device = _fake_device(UNUSED_IP)
     metric_defs = build_metric_definitions()
     for i, metric_def in enumerate(metric_defs, start=1):
@@ -35,7 +35,6 @@ async def test_poll_unreachable_device_is_reported_offline():
 
     assert len(results) == 1
     assert results[0].device_id == device.id
-    assert results[0].online is False
     assert results[0].readings == []
 
 
@@ -62,7 +61,7 @@ def real_snmp_target():
 
 
 @pytest.mark.asyncio
-async def test_poll_real_device_returns_online_with_readings(real_snmp_target):
+async def test_poll_real_device_returns_readings(real_snmp_target):
     device = _fake_device(real_snmp_target, community=os.getenv("SNMP_TEST_COMMUNITY", "public"))
     metric_defs = build_metric_definitions()
     for i, metric_def in enumerate(metric_defs, start=1):
@@ -72,7 +71,6 @@ async def test_poll_real_device_returns_online_with_readings(real_snmp_target):
 
     assert len(results) == 1
     result = results[0]
-    assert result.online is True, f"device real {real_snmp_target} não respondeu ao poll"
     # sys_uptime (MIB-2 System) é o único OID do catálogo que praticamente todo
     # device SNMP suporta — hr_cpu_load (Host Resources MIB) pode faltar em
     # equipamentos "burros" como impressoras, e isso não é falha (ver

@@ -36,7 +36,7 @@ async def run_ip_and_snmp_scan(ipscan: bool = True) -> ScanSummary:
             devices = await ip_scan.execute()
 
             subnet = SubnetRepository(session).save(Subnet(cidr=ip_scan.subnet))
-            target_devices = device_repo.save_many(
+            target_devices = device_repo.upsert_many_by_mac(
                 [
                     Device(
                         ip=device["ip"],

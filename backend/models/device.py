@@ -20,7 +20,9 @@ class Device(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     ip: Mapped[str] = mapped_column(String(15))
-    mac: Mapped[str] = mapped_column(String(17))
+    # unique: identidade física do device — IP muda por DHCP, mac não. Evita
+    # que cada scan crie uma linha nova pro mesmo aparelho (ver upsert_many_by_mac).
+    mac: Mapped[str] = mapped_column(String(17), unique=True)
     vendor: Mapped[str | None] = mapped_column(String(255), nullable=True)
     # Categoria do device (ex: "CELULAR", "SMART TV", "ROTEADOR") — nenhum
     # scan preenche isso automaticamente, é classificação manual do usuário.
