@@ -1,5 +1,6 @@
 from datetime import datetime
 
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from models import AvailabilityEvent, DeviceStatus
@@ -46,3 +47,26 @@ class AvailabilityEventRepository:
             .limit(limit)
             .all()
         )
+
+    def _overlaps_since(self, query, since: datetime):
+        """Evento se sobrepõe à janela [since, agora) se ainda está aberto
+        (ended_at nulo) ou se fechou depois de `since` — um evento fechado
+        antes disso não tem nenhum segundo dentro da janela."""
+        return query.filter(
+            or_(AvailabilityEvent.ended_at.is_(None), AvailabilityEvent.ended_at >= since)
+        )
+
+    def list_by_device_since(self, device_id: int, since: datetime) -> list[AvailabilityEvent]:
+        """Eventos do device que se sobrepõem à janela [since, agora) — usado
+        pela camada de ETL (backend/etl/) pra calcular % de disponibilidade."""
+        query = self._session.query(AvailabilityEvent).filter(
+            AvailabilityEvent.device_id == device_id
+        )
+        return self._overlaps_since(query, since).order_by(AvailabilityEvent.started_at.asc()).all()
+
+    def list_since(self, since: datetime) -> list[AvailabilityEvent]:
+        """Como list_by_device_since, mas pra todos os devices de uma vez —
+        usado pelo resumo agregado do dashboard (evita N queries, uma por
+        device)."""
+        query = self._session.query(AvailabilityEvent)
+        return self._overlaps_since(query, since).order_by(AvailabilityEvent.started_at.asc()).all()

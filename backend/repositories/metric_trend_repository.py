@@ -4,7 +4,7 @@ from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
-from models import MetricHistory, MetricTrend
+from models import MetricDefinition, MetricHistory, MetricTrend
 
 
 class MetricTrendRepository:
@@ -80,5 +80,21 @@ class MetricTrendRepository:
             self._session.query(MetricTrend)
             .filter(MetricTrend.device_id == device_id)
             .order_by(MetricTrend.bucket_start.desc())
+            .all()
+        )
+
+    def list_by_device_and_metric_since(
+        self, device_id: int, metric_key: str, since: datetime
+    ) -> list[MetricTrend]:
+        """Buckets horários de uma métrica específica desde `since`, mais
+        antigos primeiro — usado pela camada de ETL (backend/etl/) pra
+        complementar a série além da retenção do dado bruto."""
+        return (
+            self._session.query(MetricTrend)
+            .join(MetricDefinition, MetricTrend.metric_definition_id == MetricDefinition.id)
+            .filter(MetricTrend.device_id == device_id)
+            .filter(MetricDefinition.key == metric_key)
+            .filter(MetricTrend.bucket_start >= since)
+            .order_by(MetricTrend.bucket_start.asc())
             .all()
         )

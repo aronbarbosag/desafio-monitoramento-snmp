@@ -7,6 +7,7 @@ requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.141.1",
     "httpx>=0.28.1",
+    "pandas>=3.0.5",
     "psycopg[binary]>=3.3.4",
     "pysnmp>=7.1.29",
     "pytest>=9.1.1",
@@ -49,7 +50,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["api", "composer", "infra", "models", "repositories", "services", "settings", "snmp"]
+known-first-party = ["api", "composer", "etl", "infra", "models", "repositories", "services", "settings", "snmp"]
 
 [tool.ruff.lint.flake8-bugbear]
 # Depends(...) como default de parâmetro é o padrão idiomático do FastAPI
