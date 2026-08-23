@@ -106,6 +106,48 @@ def test_upsert_hourly_aggregates_ignores_text_only_metrics():
     assert trends == []
 
 
+def test_list_by_device_and_metric_since_filters_by_metric_and_cutoff():
+    with db_connection_handler.get_session() as session:
+        device_id, definition_id = _seed(session)
+        MetricHistoryRepository(session).save_many(
+            [
+                MetricHistory(
+                    device_id=device_id,
+                    metric_definition_id=definition_id,
+                    collected_at=datetime(2026, 1, 1, m, tzinfo=UTC),
+                    value_numeric=float(m),
+                )
+                for m in (8, 9, 10)
+            ]
+        )
+        MetricTrendRepository(session).upsert_hourly_aggregates(
+            before=datetime(2026, 1, 1, 11, tzinfo=UTC)
+        )
+
+        trends = MetricTrendRepository(session).list_by_device_and_metric_since(
+            device_id, "cpu_load", datetime(2026, 1, 1, 9, tzinfo=UTC)
+        )
+        # bucket_start volta naive do Postgres (coluna sem timezone), mesmo
+        # padrão já usado nos outros testes deste arquivo.
+        bucket_starts = [t.bucket_start.replace(tzinfo=UTC) for t in trends]
+
+    assert bucket_starts == [
+        datetime(2026, 1, 1, 9, tzinfo=UTC),
+        datetime(2026, 1, 1, 10, tzinfo=UTC),
+    ]
+
+
+def test_list_by_device_and_metric_since_returns_empty_for_unknown_metric():
+    with db_connection_handler.get_session() as session:
+        device_id, _definition_id = _seed(session)
+
+        trends = MetricTrendRepository(session).list_by_device_and_metric_since(
+            device_id, "does_not_exist", datetime(2020, 1, 1, tzinfo=UTC)
+        )
+
+    assert trends == []
+
+
 def test_upsert_hourly_aggregates_is_idempotent():
     closed_hour = datetime(2026, 1, 1, 10, tzinfo=UTC)
     with db_connection_handler.get_session() as session:

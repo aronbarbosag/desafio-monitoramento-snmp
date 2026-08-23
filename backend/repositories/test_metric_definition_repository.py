@@ -29,6 +29,33 @@ def test_list_static_excludes_dynamic_placeholder_oid():
     assert static_keys == ["sys_uptime"]
 
 
+def test_get_by_key_returns_matching_definition():
+    with db_connection_handler.get_session() as session:
+        repo = MetricDefinitionRepository(session)
+        repo.upsert_catalog(
+            [
+                MetricDefinition(
+                    key="sys_uptime",
+                    oid="1.3.6.1.2.1.1.3.0",
+                    name="Uptime",
+                    value_type=MetricValueType.COUNTER,
+                )
+            ]
+        )
+
+        found = repo.get_by_key("sys_uptime")
+        found_name = found.name if found else None
+
+    assert found_name == "Uptime"
+
+
+def test_get_by_key_returns_none_for_unknown_key():
+    with db_connection_handler.get_session() as session:
+        found = MetricDefinitionRepository(session).get_by_key("does_not_exist")
+
+    assert found is None
+
+
 def test_get_or_create_accepts_a_long_key():
     """Regressão: interfaces virtuais do Windows (Hyper-V) geram nomes bem
     longos, e a key vira um slug deles — key era VARCHAR(64), curta demais

@@ -46,6 +46,9 @@ class MetricDefinitionRepository:
     def list_all(self) -> list[MetricDefinition]:
         return self._session.query(MetricDefinition).all()
 
+    def get_by_key(self, key: str) -> MetricDefinition | None:
+        return self._session.query(MetricDefinition).filter_by(key=key).one_or_none()
+
     def list_static(self) -> list[MetricDefinition]:
         """Só o catálogo estático (oid real, semeado por upsert_catalog) —
         exclui os placeholders oid="dynamic" criados por get_or_create.

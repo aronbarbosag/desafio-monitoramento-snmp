@@ -22,3 +22,6 @@ graphify-out/
 
 # Checkpoint de sessão (contexto pra retomar entre sessões) — não sobe pro repo
 backend/docs/CHECKPOINT.md
+
+# Planos/specs de sessão (superpowers) — artefatos de trabalho locais, não sobem pro repo
+docs/superpowers/

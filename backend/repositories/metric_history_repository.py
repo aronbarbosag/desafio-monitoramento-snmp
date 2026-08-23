@@ -3,7 +3,7 @@ from datetime import datetime
 from sqlalchemy import delete
 from sqlalchemy.orm import Session, joinedload
 
-from models import MetricHistory
+from models import MetricDefinition, MetricHistory
 
 
 class MetricHistoryRepository:
@@ -38,5 +38,22 @@ class MetricHistoryRepository:
             .filter(MetricHistory.device_id == device_id)
             .order_by(MetricHistory.collected_at.desc())
             .limit(limit)
+            .all()
+        )
+
+    def list_by_device_and_metric_since(
+        self, device_id: int, metric_key: str, since: datetime
+    ) -> list[MetricHistory]:
+        """Leituras de uma métrica específica do device desde `since`, mais
+        antigas primeiro — usado pela camada de ETL (backend/etl/) pra montar
+        série temporal. Métrica desconhecida devolve lista vazia (join não
+        casa nenhuma linha), não erro."""
+        return (
+            self._session.query(MetricHistory)
+            .join(MetricDefinition, MetricHistory.metric_definition_id == MetricDefinition.id)
+            .filter(MetricHistory.device_id == device_id)
+            .filter(MetricDefinition.key == metric_key)
+            .filter(MetricHistory.collected_at >= since)
+            .order_by(MetricHistory.collected_at.asc())
             .all()
         )
