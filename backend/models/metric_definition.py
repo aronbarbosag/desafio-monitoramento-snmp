@@ -13,7 +13,11 @@ class MetricDefinition(Base):
     __tablename__ = "metric_definitions"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    key: Mapped[str] = mapped_column(String(64), unique=True)
+    # 255, não 64: chaves de métricas dinâmicas nascem de um slug do nome do
+    # device/interface (ver DynamicMetricReading) — interfaces virtuais do
+    # Windows (Hyper-V) geram nomes bem mais longos que os ~20 chars de uma
+    # interface física comum.
+    key: Mapped[str] = mapped_column(String(255), unique=True)
     oid: Mapped[str] = mapped_column(String(255))
     name: Mapped[str] = mapped_column(String(255))
     unit: Mapped[str | None] = mapped_column(String(32), nullable=True)

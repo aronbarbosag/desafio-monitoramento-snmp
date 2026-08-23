@@ -27,3 +27,19 @@ def test_list_static_excludes_dynamic_placeholder_oid():
         static_keys = [d.key for d in repo.list_static()]
 
     assert static_keys == ["sys_uptime"]
+
+
+def test_get_or_create_accepts_a_long_key():
+    """Regressão: interfaces virtuais do Windows (Hyper-V) geram nomes bem
+    longos, e a key vira um slug deles — key era VARCHAR(64), curta demais
+    (Postgres rejeita com StringDataRightTruncation)."""
+    long_key = "if_" + "hyper_v_virtual_switch_extension_adapter_2_extension_filter" * 2
+
+    with db_connection_handler.get_session() as session:
+        repo = MetricDefinitionRepository(session)
+        definition = repo.get_or_create(
+            long_key, name="long name", value_type=MetricValueType.GAUGE
+        )
+        definition_key = definition.key
+
+    assert definition_key == long_key

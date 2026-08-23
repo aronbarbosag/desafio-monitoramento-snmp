@@ -11,6 +11,15 @@ from pysnmp.hlapi.v3arch.asyncio import (
 SNMP_PORT = 161
 
 
+def _clean(value: object) -> str:
+    """Alguns agentes SNMP (confirmado: Windows SNMP Service, no ifDescr —
+    ex: "Software Loopback Interface 1\x00") retornam OCTET STRING com bytes
+    NUL de padding. Postgres rejeita NUL em coluna de texto — limpar aqui, na
+    única porta de entrada de todo valor vindo de um walk, protege todo mundo
+    rio abaixo (label/name/key derivados, não só o raw_value)."""
+    return str(value).replace("\x00", "")
+
+
 async def walk_column(
     engine: SnmpEngine,
     ip: str,
@@ -42,6 +51,6 @@ async def walk_column(
         if not oid_str.startswith(column_oid + "."):
             break
         index = oid_str[len(column_oid) + 1 :]
-        results[index] = str(value)
+        results[index] = _clean(value)
         current = ObjectIdentity(oid_str)
     return results
