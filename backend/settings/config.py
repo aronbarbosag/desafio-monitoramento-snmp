@@ -17,3 +17,10 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 # sondaria devices reais concorrentemente com a transação de rollback-por-
 # teste, corrompendo a pilha de SAVEPOINT compartilhada.
 DISABLE_BACKGROUND_POLLING = os.getenv("DISABLE_BACKGROUND_POLLING") is not None
+
+# Origens do frontend autorizadas a chamar a API (CORS), separadas por
+# vírgula (ex: "http://localhost:5173,https://app.exemplo.com"). Vazia por
+# padrão — sem configurar, nenhuma origem cross-site é liberada.
+CORS_ALLOWED_ORIGINS = [
+    origin.strip() for origin in os.getenv("CORS_ALLOWED", "").split(",") if origin.strip()
+]

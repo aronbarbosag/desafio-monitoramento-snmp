@@ -7,6 +7,7 @@ import os
 # setada, então isso vence o valor do .env.
 os.environ["DATABASE_URL"] = "postgresql+psycopg://test:test@localhost:5433/test"
 os.environ.setdefault("DISABLE_BACKGROUND_POLLING", "1")
+os.environ.setdefault("CORS_ALLOWED", "http://localhost:5173")
 
 from collections.abc import Iterator
 
