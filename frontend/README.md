@@ -27,11 +27,11 @@ cd frontend
 npm run dev
 ```
 
-Abra `http://localhost:5173`. Como backend (`:8000`) e frontend (`:5173`)
-rodam em origens diferentes nesse modo local, o navegador pode bloquear as
-chamadas por CORS. Se isso acontecer, adicione o `CORSMiddleware` em
-`backend/main.py` liberando `http://localhost:5173` — está fora do escopo
-deste frontend, então não foi feito aqui.
+Abra `http://localhost:5173`. O backend não tem `CORSMiddleware` configurado
+(fora do escopo deste frontend), então em vez de chamar `http://localhost:8000`
+direto do navegador, o dev server do Vite faz proxy de `/api/*` para
+`http://localhost:8000` (ver `vite.config.ts`) — a chamada do frontend fica
+same-origin e o CORS nunca entra em jogo.
 
 ## Telas
 

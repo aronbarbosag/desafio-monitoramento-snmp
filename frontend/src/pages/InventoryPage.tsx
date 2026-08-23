@@ -5,6 +5,7 @@ import type { DeviceStatus } from "../api/types";
 import { DeviceTable } from "../components/DeviceTable";
 import { KpiCard } from "../components/KpiCard";
 import { ScanButton } from "../components/ScanButton";
+import { STATUS_LABEL } from "../components/StatusBadge";
 
 const STATUS_OPTIONS: Array<DeviceStatus | "all"> = ["all", "online", "offline", "unknown"];
 
@@ -93,7 +94,7 @@ export function InventoryPage() {
         >
           {STATUS_OPTIONS.map((s) => (
             <option key={s} value={s}>
-              {s === "all" ? "Todos os status" : s}
+              {s === "all" ? "Todos os status" : STATUS_LABEL[s]}
             </option>
           ))}
         </select>

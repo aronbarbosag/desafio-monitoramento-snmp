@@ -1,4 +1,5 @@
 import { useNavigate, useParams } from "react-router-dom";
+import { parseApiDate } from "../api/dates";
 import { useDevice, useDeviceEvents, useDeviceHistory } from "../api/queries";
 import type { MetricHistoryOut } from "../api/types";
 import { StatusBadge } from "../components/StatusBadge";
@@ -72,7 +73,7 @@ export function DeviceDetailPage() {
           </tr>
           <tr>
             <td>Última checagem</td>
-            <td>{d.last_checked_at ? new Date(d.last_checked_at).toLocaleString() : "—"}</td>
+            <td>{d.last_checked_at ? parseApiDate(d.last_checked_at).toLocaleString() : "—"}</td>
           </tr>
         </tbody>
       </table>

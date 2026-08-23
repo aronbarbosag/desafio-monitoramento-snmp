@@ -1,6 +1,6 @@
 import type { DeviceStatus } from "../api/types";
 
-const STATUS_LABEL: Record<DeviceStatus, string> = {
+export const STATUS_LABEL: Record<DeviceStatus, string> = {
   online: "Online",
   offline: "Offline",
   unknown: "Desconhecido",

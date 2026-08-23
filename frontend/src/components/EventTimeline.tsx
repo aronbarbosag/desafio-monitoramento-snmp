@@ -1,8 +1,9 @@
+import { parseApiDate } from "../api/dates";
 import type { AvailabilityEventOut } from "../api/types";
 import { StatusBadge } from "./StatusBadge";
 
 function formatDuration(ms: number): string {
-  const minutes = Math.floor(ms / 60_000);
+  const minutes = Math.floor(Math.max(0, ms) / 60_000);
   if (minutes < 60) return `${minutes} min`;
   const hours = Math.floor(minutes / 60);
   if (hours < 24) return `${hours}h ${minutes % 60}min`;
@@ -16,8 +17,8 @@ export function computeUptimePercent(events: AvailabilityEventOut[]): number | n
   let onlineMs = 0;
   let totalMs = 0;
   for (const e of events) {
-    const start = new Date(e.started_at).getTime();
-    const end = e.ended_at ? new Date(e.ended_at).getTime() : now;
+    const start = parseApiDate(e.started_at).getTime();
+    const end = e.ended_at ? parseApiDate(e.ended_at).getTime() : now;
     const duration = Math.max(0, end - start);
     totalMs += duration;
     if (e.status === "online") onlineMs += duration;
@@ -32,14 +33,14 @@ export function EventTimeline({ events }: { events: AvailabilityEventOut[] }) {
   return (
     <ul className="event-timeline">
       {events.map((e) => {
-        const start = new Date(e.started_at).getTime();
-        const end = e.ended_at ? new Date(e.ended_at).getTime() : Date.now();
+        const start = parseApiDate(e.started_at).getTime();
+        const end = e.ended_at ? parseApiDate(e.ended_at).getTime() : Date.now();
         return (
           <li key={e.id} className="event-timeline__item">
             <StatusBadge status={e.status} />
             <span>
-              {new Date(e.started_at).toLocaleString()}
-              {e.ended_at ? ` → ${new Date(e.ended_at).toLocaleString()}` : " → em curso"}
+              {parseApiDate(e.started_at).toLocaleString()}
+              {e.ended_at ? ` → ${parseApiDate(e.ended_at).toLocaleString()}` : " → em curso"}
             </span>
             <span className="event-timeline__duration">{formatDuration(end - start)}</span>
           </li>

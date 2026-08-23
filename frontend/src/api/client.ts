@@ -1,6 +1,6 @@
 import type { AvailabilityEventOut, DeviceOut, MetricHistoryOut, ScanResult } from "./types";
 
-const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+const BASE_URL = import.meta.env.VITE_API_URL || "/api";
 const DEFAULT_LIST_LIMIT = 100;
 
 export class ApiError extends Error {

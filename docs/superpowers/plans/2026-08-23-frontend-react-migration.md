@@ -4,7 +4,7 @@
 
 **Goal:** Substituir o mockup estático `frontend/Network Monitor.dc.html` por uma SPA React real (Vite + TypeScript) que consome a API FastAPI existente (`backend/api/routers/devices.py`), cobrindo Inventário de devices e Detalhe de device com dados reais.
 
-**Architecture:** SPA client-side em `frontend/`, dois componentes de rota (`InventoryPage`, `DeviceDetailPage`) sobre React Router, dados via TanStack Query batendo direto na API FastAPI (CORS já liberado para `http://localhost:5173`). Sem backend próprio do frontend, sem SSR.
+**Architecture:** SPA client-side em `frontend/`, dois componentes de rota (`InventoryPage`, `DeviceDetailPage`) sobre React Router, dados via TanStack Query batendo na API FastAPI através de um proxy `/api` do Vite dev server (o backend não tem CORS configurado). Sem backend próprio do frontend, sem SSR.
 
 **Tech Stack:** Vite, React 18, TypeScript, react-router-dom, @tanstack/react-query. CSS puro (tokens de `ds-industry.css` reaproveitados).
 
@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Base URL do backend por padrão: `http://localhost:8000` (env `VITE_API_URL` no frontend).
-- CORS do backend já libera `http://localhost:5173` por padrão (`backend/.env.example: CORS_ALLOWED=http://localhost:5173`) — não mexer no backend.
+- O backend não tem `CORSMiddleware` configurado (nenhuma menção a CORS em `backend/`) — não mexer no backend. Em vez disso, o Vite dev server faz proxy de `/api` para `http://localhost:8000` (`frontend/vite.config.ts`), tornando as chamadas same-origin.
 - `DeviceStatus` tem só 3 valores: `"unknown" | "online" | "offline"` (`backend/models/enums.py`) — não inventar outros estados.
 - `GET /devices/{id}/history` e `GET /devices/{id}/events` retornam **mais recente primeiro** (`ORDER BY ... DESC`, ver `backend/repositories/metric_history_repository.py` e `availability_event_repository.py`) — quem monta série cronológica (sparkline) precisa inverter a lista.
 - Sem suíte de testes automatizada de frontend neste MVP (decisão da spec, aprovada pelo usuário). Verificação de cada task é `npx tsc --noEmit` (checagem de tipos) + verificação manual no navegador contra o backend real rodando localmente. Não criar arquivos `*.test.ts(x)`.
@@ -1151,8 +1151,9 @@ cd frontend
 npm run dev
 \`\`\`
 
-Abra `http://localhost:5173`. O backend já libera CORS para essa origem por
-padrão (`CORS_ALLOWED` em `backend/.env`).
+Abra `http://localhost:5173`. O backend não tem CORS configurado; o Vite dev
+server faz proxy de `/api` para `http://localhost:8000`, então a chamada do
+frontend é same-origin e não precisa de CORS.
 
 ## Telas
 

@@ -19,9 +19,11 @@ router (`devices`):
 - `GET /devices/{id}/events?limit=` — eventos de disponibilidade (`AvailabilityEventOut[]`)
 - `POST /devices/scan` — dispara scan IP+SNMP síncrono, devolve `ScanResult`
 
-CORS já está configurado (`CORS_ALLOWED_ORIGINS`, default
-`http://localhost:5173` em `.env.example`) — o backend já espera um
-frontend Vite rodando na porta padrão.
+CORS não está configurado no backend (nenhum `CORSMiddleware` em
+`backend/main.py` nem em nenhum outro lugar da árvore `backend/`) — o
+frontend contorna isso com um proxy `/api` no Vite dev server, que encaminha
+para `http://localhost:8000` (ver `frontend/vite.config.ts`), tornando a
+chamada same-origin.
 
 O mockup imagina bem mais do que o backend entrega hoje: topologia LLDP,
 KPIs de SLA/latência/disponibilidade 30d, layout "por subnet", e um form de

@@ -1,3 +1,4 @@
+import { parseApiDate } from "../api/dates";
 import type { DeviceOut } from "../api/types";
 import { StatusBadge } from "./StatusBadge";
 
@@ -31,7 +32,7 @@ export function DeviceTable({ devices, onSelect }: DeviceTableProps) {
               <StatusBadge status={d.status} />
             </td>
             <td>{d.snmp_supported ? "Sim" : "Não"}</td>
-            <td>{d.last_checked_at ? new Date(d.last_checked_at).toLocaleString() : "—"}</td>
+            <td>{d.last_checked_at ? parseApiDate(d.last_checked_at).toLocaleString() : "—"}</td>
           </tr>
         ))}
       </tbody>
