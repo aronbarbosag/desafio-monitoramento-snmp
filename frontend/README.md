@@ -27,8 +27,11 @@ cd frontend
 npm run dev
 ```
 
-Abra `http://localhost:5173`. O backend já libera CORS para essa origem por
-padrão (`CORS_ALLOWED` em `backend/.env`).
+Abra `http://localhost:5173`. Como backend (`:8000`) e frontend (`:5173`)
+rodam em origens diferentes nesse modo local, o navegador pode bloquear as
+chamadas por CORS. Se isso acontecer, adicione o `CORSMiddleware` em
+`backend/main.py` liberando `http://localhost:5173` — está fora do escopo
+deste frontend, então não foi feito aqui.
 
 ## Telas
 
