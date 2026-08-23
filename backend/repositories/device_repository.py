@@ -76,6 +76,7 @@ class DeviceRepository:
         device.sys_descr = sys_descr
         device.sys_object_id = sys_object_id
         device.snmp_community = snmp_community
+        device.snmp_supported = True
         device.model_name = model_name
         device.sys_contact = sys_contact
         device.sys_location = sys_location

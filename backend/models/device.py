@@ -22,6 +22,9 @@ class Device(Base):
     ip: Mapped[str] = mapped_column(String(15))
     mac: Mapped[str] = mapped_column(String(17))
     vendor: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # Categoria do device (ex: "CELULAR", "SMART TV", "ROTEADOR") — nenhum
+    # scan preenche isso automaticamente, é classificação manual do usuário.
+    device_type: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
     subnet_id: Mapped[int] = mapped_column(ForeignKey("subnets.id"))
     subnet: Mapped["Subnet"] = relationship(back_populates="devices")
@@ -31,6 +34,10 @@ class Device(Base):
     sys_descr: Mapped[str | None] = mapped_column(String(255), nullable=True)
     sys_object_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     snmp_community: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # Setado junto com snmp_community em update_snmp_info, quando o device
+    # responde ao probe do SnmpScanService — sinal explícito e persistido de
+    # suporte a SNMP (em vez de inferir por snmp_community.isnot(None)).
+    snmp_supported: Mapped[bool] = mapped_column(default=False)
     # Modelo (ex: "L3250 Series"), vindo de prtGeneralPrinterName quando o
     # device suporta Printer MIB. Setado != None é o sinal usado pelo
     # PrinterMetricsService pra saber quais devices vale a pena sondar.

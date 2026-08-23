@@ -9,17 +9,19 @@ from composer.registry_metric_catalog import seed_metric_catalog
 from composer.registry_metrics_collection import run_forever
 from infra.database.db_connection_handler import db_connection_handler
 from models import Base
+from settings.config import DISABLE_BACKGROUND_POLLING
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     Base.metadata.create_all(db_connection_handler.get_engine())
     seed_metric_catalog()
-    collection_task = asyncio.create_task(run_forever())
+    collection_task = None if DISABLE_BACKGROUND_POLLING else asyncio.create_task(run_forever())
     yield
-    collection_task.cancel()
-    with suppress(asyncio.CancelledError):
-        await collection_task
+    if collection_task is not None:
+        collection_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await collection_task
     db_connection_handler.close()
 
 

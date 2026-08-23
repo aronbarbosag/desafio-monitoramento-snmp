@@ -1,0 +1,9 @@
+services:
+  app:
+    build:
+      context: ./backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    restart: unless-stopped

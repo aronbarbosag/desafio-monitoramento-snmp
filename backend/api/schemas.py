@@ -12,11 +12,13 @@ class DeviceOut(BaseModel):
     ip: str
     mac: str
     vendor: str | None
+    device_type: str | None
     hostname: str | None
     sys_descr: str | None
     model_name: str | None
     sys_contact: str | None
     sys_location: str | None
+    snmp_supported: bool
     status: DeviceStatus
     poll_interval_seconds: int
     consecutive_failures: int

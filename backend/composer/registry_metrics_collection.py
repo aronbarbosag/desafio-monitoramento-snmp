@@ -22,6 +22,15 @@ TICK_INTERVAL_SECONDS = 15
 _NUMERIC_VALUE_TYPES = (MetricValueType.INTEGER, MetricValueType.COUNTER, MetricValueType.GAUGE)
 
 
+def _sanitize_text(raw_value: str) -> str:
+    """Alguns OIDs (ex: hrPrinterDetectedErrorState) são bitmask retornados
+    como OCTET STRING — podem conter bytes NUL, que o Postgres rejeita em
+    coluna de texto (SQLite aceitava, por isso só apareceu ao trocar de
+    banco). Remove-los é seguro aqui: o dado é um bitmask de erro, all-zero
+    (string vazia após o strip) já significa "sem erro"."""
+    return raw_value.replace("\x00", "")
+
+
 def _build_history(
     device_id: int,
     collected_at: datetime,
@@ -37,7 +46,7 @@ def _build_history(
         metric_definition_id=metric_def.id,
         collected_at=collected_at,
         value_numeric=float(reading.raw_value) if is_numeric else None,
-        value_text=None if is_numeric else reading.raw_value,
+        value_text=None if is_numeric else _sanitize_text(reading.raw_value),
     )
 
 
@@ -60,7 +69,7 @@ def _build_dynamic_history(
         metric_definition_id=definition.id,
         collected_at=collected_at,
         value_numeric=float(reading.raw_value) if is_numeric else None,
-        value_text=None if is_numeric else reading.raw_value,
+        value_text=None if is_numeric else _sanitize_text(reading.raw_value),
     )
 
 
