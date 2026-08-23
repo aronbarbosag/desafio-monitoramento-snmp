@@ -26,10 +26,12 @@ export function MetricCard({ points }: MetricCardProps) {
     <div className="card blueprint metric-card">
       <div className="card-kicker">
         {latest.metric_name}
-        {latest.metric_unit ? ` (${latest.metric_unit})` : ""}
+        {!latest.display_value && latest.metric_unit ? ` (${latest.metric_unit})` : ""}
       </div>
       <div className="metric-card__value">
-        {latest.value_type === "string" ? latest.value_text : latest.value_numeric}
+        {latest.value_type === "string"
+          ? latest.value_text
+          : (latest.display_value ?? latest.value_numeric)}
       </div>
       {numeric.length >= 2 && (
         <svg width="100%" height="32" viewBox="0 0 120 32" preserveAspectRatio="none">

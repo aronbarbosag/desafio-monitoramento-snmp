@@ -28,6 +28,7 @@ export interface MetricHistoryOut {
   value_type: MetricValueType;
   value_numeric: number | null;
   value_text: string | null;
+  display_value: string | null;
 }
 
 export interface AvailabilityEventOut {

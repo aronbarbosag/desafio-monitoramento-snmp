@@ -11,14 +11,6 @@ export function useDevices() {
   });
 }
 
-export function useDevice(id: number) {
-  return useQuery({
-    queryKey: ["devices", id],
-    queryFn: () => apiClient.getDevice(id),
-    refetchInterval: DEVICES_REFETCH_MS,
-  });
-}
-
 export function useDeviceHistory(id: number) {
   return useQuery({
     queryKey: ["devices", id, "history"],

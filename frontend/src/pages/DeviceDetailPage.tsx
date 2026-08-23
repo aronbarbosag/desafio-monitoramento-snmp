@@ -1,6 +1,6 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { parseApiDate } from "../api/dates";
-import { useDevice, useDeviceEvents, useDeviceHistory } from "../api/queries";
+import { useDeviceEvents, useDeviceHistory, useDevices } from "../api/queries";
 import type { MetricHistoryOut } from "../api/types";
 import { StatusBadge } from "../components/StatusBadge";
 import { MetricCard } from "../components/MetricCard";
@@ -19,14 +19,23 @@ export function DeviceDetailPage() {
   const deviceId = Number(id);
   const navigate = useNavigate();
 
-  const device = useDevice(deviceId);
+  // Mesma query/cache do inventário (useDevices) — evita o device aparecer
+  // com um status diferente aqui do que na tela de inventário por causa de
+  // duas fontes de dado buscadas em instantes distintos.
+  const devices = useDevices();
   const history = useDeviceHistory(deviceId);
   const events = useDeviceEvents(deviceId);
 
-  if (device.isLoading) return <p>Carregando device...</p>;
-  if (device.isError || !device.data) return <p>Device não encontrado.</p>;
+  const d = devices.data?.find((device) => device.id === deviceId);
 
-  const d = device.data;
+  if (devices.isLoading && !devices.data) return <p>Carregando device...</p>;
+  if (!d) {
+    if (devices.isError) {
+      return <p>Falha ao carregar device. Verifique a conexão com o servidor.</p>;
+    }
+    return <p>Device não encontrado.</p>;
+  }
+
   const groups = groupByMetricKey(history.data ?? []);
   const uptimePercent = computeUptimePercent(events.data ?? []);
 

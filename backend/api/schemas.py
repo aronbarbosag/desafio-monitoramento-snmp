@@ -2,6 +2,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict
 
+from etl.metric_formatting import humanize_metric_display
 from models import DeviceStatus, MetricHistory, MetricValueType
 
 
@@ -34,6 +35,7 @@ class MetricHistoryOut(BaseModel):
     value_type: MetricValueType
     value_numeric: float | None
     value_text: str | None
+    display_value: str | None
 
     @classmethod
     def from_model(cls, history: MetricHistory) -> "MetricHistoryOut":
@@ -46,6 +48,9 @@ class MetricHistoryOut(BaseModel):
             value_type=history.metric_definition.value_type,
             value_numeric=history.value_numeric,
             value_text=history.value_text,
+            display_value=humanize_metric_display(
+                history.metric_definition.unit, history.value_numeric
+            ),
         )
 
 

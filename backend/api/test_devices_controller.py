@@ -17,7 +17,7 @@ from fastapi.testclient import TestClient
 from composer.registry_devices import ScanSummary, run_ip_and_snmp_scan
 from infra.database.db_connection_handler import db_connection_handler
 from main import app
-from models import Device, DeviceStatus, MetricDefinition, MetricHistory, Subnet
+from models import Device, DeviceStatus, MetricDefinition, MetricHistory, MetricValueType, Subnet
 from repositories.availability_event_repository import AvailabilityEventRepository
 from repositories.device_repository import DeviceRepository
 from repositories.metric_definition_repository import MetricDefinitionRepository
@@ -98,11 +98,49 @@ def test_device_history_and_events():
     assert len(history) >= 1
     assert history[0]["metric_key"] == "sys_uptime"
     assert history[0]["value_numeric"] == 123.0
+    # 123 ticks (centésimos de segundo) = 1.23s -> "0h 0min"
+    assert history[0]["display_value"] == "0h 0min"
 
     assert events_response.status_code == 200
     events = events_response.json()
     assert len(events) >= 1
     assert events[0]["status"] == "online"
+
+
+def test_device_history_display_value_converts_bytes_to_gb():
+    with db_connection_handler.get_session() as session:
+        subnet = SubnetRepository(session).save(Subnet(cidr="192.0.2.0/24"))
+        device = DeviceRepository(session).save_many(
+            [Device(ip="192.0.2.20", mac="00:11:22:33:44:66", subnet_id=subnet.id)]
+        )[0]
+        metric_def = MetricDefinition(
+            key="storage_ram_total_bytes",
+            oid="1.3.6.1.2.1.25.2.3.1.5.1",
+            name="RAM Total",
+            value_type=MetricValueType.GAUGE,
+            unit="bytes",
+        )
+        session.add(metric_def)
+        session.flush()
+        MetricHistoryRepository(session).save_many(
+            [
+                MetricHistory(
+                    device_id=device.id,
+                    metric_definition_id=metric_def.id,
+                    collected_at=datetime.now(UTC),
+                    value_numeric=2 * 1024**3,
+                )
+            ]
+        )
+        device_id = device.id
+
+    with TestClient(app) as client:
+        response = client.get(f"/devices/{device_id}/history")
+
+    assert response.status_code == 200
+    history = response.json()
+    assert history[0]["value_numeric"] == 2 * 1024**3
+    assert history[0]["display_value"] == "2.00 GB"
 
 
 def test_history_and_events_404_for_unknown_device():

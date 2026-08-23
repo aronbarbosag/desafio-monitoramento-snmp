@@ -100,6 +100,18 @@
   color: oklch(0.55 0.14 27);
 }
 
+.banner {
+  padding: var(--space-3) var(--space-4);
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.banner--warning {
+  background: oklch(0.9 0.09 85 / 0.35);
+  border: 1px solid oklch(0.7 0.14 70);
+  color: oklch(0.4 0.12 70);
+}
+
 .status-badge {
   display: inline-flex;
   align-items: center;

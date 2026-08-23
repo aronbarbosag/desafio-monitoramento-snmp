@@ -48,8 +48,8 @@ export function InventoryPage() {
     };
   }, [devices]);
 
-  if (isLoading) return <p>Carregando devices...</p>;
-  if (isError) return <p>Falha ao carregar devices.</p>;
+  if (isLoading && !devices) return <p>Carregando devices...</p>;
+  if (isError && !devices) return <p>Falha ao carregar devices.</p>;
 
   return (
     <div className="page">
@@ -57,6 +57,12 @@ export function InventoryPage() {
         <h1>Inventário de devices</h1>
         <ScanButton />
       </header>
+
+      {isError && devices && (
+        <p className="banner banner--warning">
+          Sem conexão com o servidor — mostrando os últimos dados conhecidos.
+        </p>
+      )}
 
       <div className="kpi-grid">
         <KpiCard label="Total" value={kpis.total} />

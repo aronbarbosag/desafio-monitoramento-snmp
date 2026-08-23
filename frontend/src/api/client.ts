@@ -24,7 +24,6 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const apiClient = {
   listDevices: () => request<DeviceOut[]>("/devices"),
-  getDevice: (id: number) => request<DeviceOut>(`/devices/${id}`),
   getDeviceHistory: (id: number, limit = DEFAULT_LIST_LIMIT) =>
     request<MetricHistoryOut[]>(`/devices/${id}/history?limit=${limit}`),
   getDeviceEvents: (id: number, limit = DEFAULT_LIST_LIMIT) =>
