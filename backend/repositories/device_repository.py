@@ -65,6 +65,9 @@ class DeviceRepository:
         sys_descr: str,
         sys_object_id: str,
         snmp_community: str,
+        model_name: str | None = None,
+        sys_contact: str | None = None,
+        sys_location: str | None = None,
     ) -> None:
         """Preenche a identidade SNMP de um Device já existente (encontrado
         primeiro pelo IpScanService), a partir de um SnmpScanResult."""
@@ -73,4 +76,7 @@ class DeviceRepository:
         device.sys_descr = sys_descr
         device.sys_object_id = sys_object_id
         device.snmp_community = snmp_community
+        device.model_name = model_name
+        device.sys_contact = sys_contact
+        device.sys_location = sys_location
         self._session.flush()

@@ -68,6 +68,9 @@ async def run_ip_and_snmp_scan(ipscan: bool = True) -> ScanSummary:
                     sys_descr=result.sys_descr,
                     sys_object_id=result.sys_object_id,
                     snmp_community=result.community,
+                    model_name=result.model_name,
+                    sys_contact=result.sys_contact,
+                    sys_location=result.sys_location,
                 )
 
     return ScanSummary(

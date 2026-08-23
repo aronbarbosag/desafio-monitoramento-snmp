@@ -10,8 +10,23 @@ from pysnmp.hlapi.v3arch.asyncio import (
     UdpTransportTarget,
     get_cmd,
 )
+from pysnmp.proto.rfc1905 import NoSuchInstance, NoSuchObject
 
-from snmp.oids import SystemOID
+from snmp.oids import PrinterMibOID, SystemOID
+from snmp.snmp_walk import walk_column
+
+_UNSUPPORTED_VALUE_TYPES = (NoSuchObject, NoSuchInstance)
+
+
+def _optional_str(value) -> str | None:
+    """sysContact/sysLocation são opcionais na prática — muitos devices
+    deixam em branco ou nem implementam. NoSuchObject/string vazia viram
+    None em vez de poluir o banco com texto sem sentido."""
+    if isinstance(value, _UNSUPPORTED_VALUE_TYPES):
+        return None
+    text = str(value)
+    return text or None
+
 
 SNMP_PORT = 161
 DEFAULT_COMMUNITY = "public"
@@ -30,6 +45,9 @@ class SnmpScanResult:
     sys_name: str
     sys_object_id: str
     community: str
+    model_name: str | None = None
+    sys_contact: str | None = None
+    sys_location: str | None = None
 
 
 class SnmpScanService:
@@ -61,18 +79,42 @@ class SnmpScanService:
                 ObjectType(ObjectIdentity(SystemOID.SYS_DESCR)),
                 ObjectType(ObjectIdentity(SystemOID.SYS_NAME)),
                 ObjectType(ObjectIdentity(SystemOID.SYS_OBJECT_ID)),
+                ObjectType(ObjectIdentity(SystemOID.SYS_CONTACT)),
+                ObjectType(ObjectIdentity(SystemOID.SYS_LOCATION)),
             )
 
         if error_indication or error_status:
             return None
 
-        sys_descr, sys_name, sys_object_id = (str(value) for _oid, value in var_binds)
+        sys_descr_v, sys_name_v, sys_object_id_v, sys_contact_v, sys_location_v = (
+            value for _oid, value in var_binds
+        )
+        sys_descr, sys_name, sys_object_id = str(sys_descr_v), str(sys_name_v), str(sys_object_id_v)
+        sys_contact = _optional_str(sys_contact_v)
+        sys_location = _optional_str(sys_location_v)
+
+        # Probe extra e opcional: só devices que implementam Printer MIB
+        # respondem aqui. Walk (não GET fixo) porque o índice varia por
+        # device — ver PrinterMibOID.
+        printer_name_entries = await walk_column(
+            engine,
+            ip,
+            self.community,
+            PrinterMibOID.PRT_GENERAL_PRINTER_NAME_COL,
+            timeout=DEFAULT_TIMEOUT_SECONDS,
+            retries=DEFAULT_RETRIES,
+        )
+        model_name = next(iter(printer_name_entries.values()), None) or None
+
         return SnmpScanResult(
             ip=ip,
             sys_descr=sys_descr,
             sys_name=sys_name,
             sys_object_id=sys_object_id,
             community=self.community,
+            model_name=model_name,
+            sys_contact=sys_contact,
+            sys_location=sys_location,
         )
 
     async def execute(self, ips: list[str]) -> list[SnmpScanResult]:

@@ -31,6 +31,15 @@ class Device(Base):
     sys_descr: Mapped[str | None] = mapped_column(String(255), nullable=True)
     sys_object_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     snmp_community: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # Modelo (ex: "L3250 Series"), vindo de prtGeneralPrinterName quando o
+    # device suporta Printer MIB. Setado != None é o sinal usado pelo
+    # PrinterMetricsService pra saber quais devices vale a pena sondar.
+    model_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # sysContact/sysLocation (MIB-2 System) — metadado administrativo que o
+    # próprio device reporta (responsável, localização física). Muitos
+    # devices deixam em branco; nesse caso fica None.
+    sys_contact: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    sys_location: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     # Estado de polling, usado pelo MetricsCollectionService (backoff exponencial
     # em cima de next_poll_at/consecutive_failures quando o device não responde).

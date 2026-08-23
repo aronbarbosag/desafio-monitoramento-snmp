@@ -14,6 +14,9 @@ class DeviceOut(BaseModel):
     vendor: str | None
     hostname: str | None
     sys_descr: str | None
+    model_name: str | None
+    sys_contact: str | None
+    sys_location: str | None
     status: DeviceStatus
     poll_interval_seconds: int
     consecutive_failures: int

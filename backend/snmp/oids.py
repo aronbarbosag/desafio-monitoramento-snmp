@@ -12,39 +12,54 @@ class SystemOID(StrEnum):
     SYS_DESCR = "1.3.6.1.2.1.1.1.0"
     SYS_OBJECT_ID = "1.3.6.1.2.1.1.2.0"
     SYS_UPTIME = "1.3.6.1.2.1.1.3.0"
+    SYS_CONTACT = "1.3.6.1.2.1.1.4.0"
     SYS_NAME = "1.3.6.1.2.1.1.5.0"
+    SYS_LOCATION = "1.3.6.1.2.1.1.6.0"
 
 
-class HostResourcesOID(StrEnum):
-    """Host Resources MIB (RFC 2790). Nem todo device implementa — switches e
-    equipamentos de rede "burros" tipicamente não respondem a essa MIB, então o
-    MetricsCollectionService deve tratar "sem resposta nesse OID" como métrica
-    não suportada, não como device offline."""
+class HostResourcesTableOID(StrEnum):
+    """Host Resources MIB (RFC 2790) — bases de COLUNA de tabela. Quantidade
+    de CPUs e de unidades de armazenamento varia por device (mesmo problema
+    do PrinterMibOID), então não entram no METRIC_CATALOG estático — são
+    resolvidos via walk dinâmico em
+    services/host_resources_metrics_service.py."""
 
-    HR_CPU_LOAD = "1.3.6.1.2.1.25.3.3.1.2.1"
-    # hrPrinterDetectedErrorState do hrDeviceIndex 1 — índice fixo (mesma
-    # simplificação do HR_CPU_LOAD acima). Confirmado por SNMP walk real
-    # contra uma impressora Epson: hrDeviceIndex 1 é sempre a entrada do tipo
-    # hrDevicePrinter quando o device SÓ tem uma impressora física.
-    HR_PRINTER_DETECTED_ERROR_STATE = "1.3.6.1.2.1.25.3.5.1.2.1"
+    HR_PROCESSOR_LOAD_COL = "1.3.6.1.2.1.25.3.3.1.2"
+    HR_STORAGE_DESCR_COL = "1.3.6.1.2.1.25.2.3.1.3"
+    HR_STORAGE_ALLOCATION_UNITS_COL = "1.3.6.1.2.1.25.2.3.1.4"
+    HR_STORAGE_SIZE_COL = "1.3.6.1.2.1.25.2.3.1.5"
+    HR_STORAGE_USED_COL = "1.3.6.1.2.1.25.2.3.1.6"
 
 
-class PrinterOID(StrEnum):
-    """Printer MIB (RFC 3805) — métricas específicas de impressora.
+class IfMibOID(StrEnum):
+    """IF-MIB (RFC 2863) — interfaces de rede. Quantidade de interfaces varia
+    por device (1 numa impressora, dezenas num switch) — mesma lógica de
+    walk dinâmico, ver services/host_resources_metrics_service.py."""
 
-    prtMarkerSuppliesLevel é uma TABELA (um nível por suprimento — toner,
-    cores de tinta etc.), não um escalar. O catálogo atual só suporta GET
-    fixo (sem walk de tabela), então os 4 primeiros índices ficam
-    hardcoded — cobre o caso real validado (impressora com 4 cartuchos de
-    tinta: preto/ciano/magenta/amarelo). Em devices com menos suprimentos,
-    os índices excedentes voltam NoSuchInstance e são descartados como
-    métrica não suportada (mesmo tratamento do HR_CPU_LOAD em switches)."""
+    IF_DESCR_COL = "1.3.6.1.2.1.2.2.1.2"
+    IF_OPER_STATUS_COL = "1.3.6.1.2.1.2.2.1.8"
+    IF_IN_OCTETS_COL = "1.3.6.1.2.1.2.2.1.10"
+    IF_IN_ERRORS_COL = "1.3.6.1.2.1.2.2.1.14"
+    IF_OUT_OCTETS_COL = "1.3.6.1.2.1.2.2.1.16"
+    IF_OUT_ERRORS_COL = "1.3.6.1.2.1.2.2.1.20"
 
-    MARKER_LIFE_COUNT = "1.3.6.1.2.1.43.10.2.1.4.1.1"
-    MARKER_SUPPLIES_LEVEL_1 = "1.3.6.1.2.1.43.11.1.1.9.1.1"
-    MARKER_SUPPLIES_LEVEL_2 = "1.3.6.1.2.1.43.11.1.1.9.1.2"
-    MARKER_SUPPLIES_LEVEL_3 = "1.3.6.1.2.1.43.11.1.1.9.1.3"
-    MARKER_SUPPLIES_LEVEL_4 = "1.3.6.1.2.1.43.11.1.1.9.1.4"
+
+class PrinterMibOID(StrEnum):
+    """Printer MIB (RFC 3805) / hrPrinterTable — bases de COLUNA de tabela, não
+    escalares prontos pra GET. O hrDeviceIndex da impressora e a quantidade/
+    ordem dos suprimentos variam por device (confirmado: nesta LAN é índice 1
+    com 4 cartuchos de tinta, mas isso não generaliza pra outras redes/
+    fabricantes). Por isso não entram no METRIC_CATALOG estático — são
+    resolvidos via walk dinâmico (snmp/snmp_walk.py.walk_column) em
+    services/snmp_scan_service.py (identidade) e
+    services/printer_metrics_service.py (métricas), um walk por ciclo em vez
+    de um índice cacheado."""
+
+    PRT_GENERAL_PRINTER_NAME_COL = "1.3.6.1.2.1.43.5.1.1.16"
+    HR_PRINTER_DETECTED_ERROR_STATE_COL = "1.3.6.1.2.1.25.3.5.1.2"
+    PRT_MARKER_LIFE_COUNT_COL = "1.3.6.1.2.1.43.10.2.1.4"
+    PRT_MARKER_SUPPLIES_DESCRIPTION_COL = "1.3.6.1.2.1.43.11.1.1.6"
+    PRT_MARKER_SUPPLIES_LEVEL_COL = "1.3.6.1.2.1.43.11.1.1.9"
 
 
 class MetricTemplate(NamedTuple):
@@ -67,54 +82,6 @@ METRIC_CATALOG: list[MetricTemplate] = [
         name="System Uptime",
         value_type=MetricValueType.COUNTER,
         unit="ticks",
-    ),
-    MetricTemplate(
-        key="hr_cpu_load",
-        oid=HostResourcesOID.HR_CPU_LOAD,
-        name="CPU Load",
-        value_type=MetricValueType.GAUGE,
-        unit="%",
-    ),
-    MetricTemplate(
-        key="printer_error_state",
-        oid=HostResourcesOID.HR_PRINTER_DETECTED_ERROR_STATE,
-        name="Printer Detected Error State",
-        value_type=MetricValueType.STRING,
-    ),
-    MetricTemplate(
-        key="printer_page_count",
-        oid=PrinterOID.MARKER_LIFE_COUNT,
-        name="Printer Marker Life Count",
-        value_type=MetricValueType.COUNTER,
-        unit="pages",
-    ),
-    MetricTemplate(
-        key="printer_supply_level_1",
-        oid=PrinterOID.MARKER_SUPPLIES_LEVEL_1,
-        name="Marker Supply 1 Level",
-        value_type=MetricValueType.INTEGER,
-        unit="%",
-    ),
-    MetricTemplate(
-        key="printer_supply_level_2",
-        oid=PrinterOID.MARKER_SUPPLIES_LEVEL_2,
-        name="Marker Supply 2 Level",
-        value_type=MetricValueType.INTEGER,
-        unit="%",
-    ),
-    MetricTemplate(
-        key="printer_supply_level_3",
-        oid=PrinterOID.MARKER_SUPPLIES_LEVEL_3,
-        name="Marker Supply 3 Level",
-        value_type=MetricValueType.INTEGER,
-        unit="%",
-    ),
-    MetricTemplate(
-        key="printer_supply_level_4",
-        oid=PrinterOID.MARKER_SUPPLIES_LEVEL_4,
-        name="Marker Supply 4 Level",
-        value_type=MetricValueType.INTEGER,
-        unit="%",
     ),
 ]
 

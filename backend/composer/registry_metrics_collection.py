@@ -7,12 +7,15 @@ from repositories.availability_event_repository import AvailabilityEventReposito
 from repositories.device_repository import DeviceRepository
 from repositories.metric_definition_repository import MetricDefinitionRepository
 from repositories.metric_history_repository import MetricHistoryRepository
+from services.dynamic_metric_reading import DynamicMetricReading
+from services.host_resources_metrics_service import HostResourcesMetricsService
 from services.metrics_collection_service import (
     DevicePollResult,
     MetricReading,
     MetricsCollectionService,
 )
 from services.polling_backoff import next_poll_interval
+from services.printer_metrics_service import PrinterMetricsService
 
 TICK_INTERVAL_SECONDS = 15
 
@@ -32,6 +35,29 @@ def _build_history(
     return MetricHistory(
         device_id=device_id,
         metric_definition_id=metric_def.id,
+        collected_at=collected_at,
+        value_numeric=float(reading.raw_value) if is_numeric else None,
+        value_text=None if is_numeric else reading.raw_value,
+    )
+
+
+def _build_dynamic_history(
+    device_id: int,
+    collected_at: datetime,
+    reading: DynamicMetricReading,
+    definition_repo: MetricDefinitionRepository,
+) -> MetricHistory:
+    """Como _build_history, mas a MetricDefinition é descoberta em runtime
+    (chave/tipo vêm do walk, não do catálogo estático) — get_or_create garante
+    idempotência entre ciclos e entre devices que reportam a mesma métrica
+    (ex: dois devices com uma interface chamada "eth0")."""
+    definition = definition_repo.get_or_create(
+        reading.key, name=reading.name, value_type=reading.value_type, unit=reading.unit
+    )
+    is_numeric = reading.value_type in _NUMERIC_VALUE_TYPES
+    return MetricHistory(
+        device_id=device_id,
+        metric_definition_id=definition.id,
         collected_at=collected_at,
         value_numeric=float(reading.raw_value) if is_numeric else None,
         value_text=None if is_numeric else reading.raw_value,
@@ -90,7 +116,8 @@ async def run_collection_cycle() -> None:
         device_repo = DeviceRepository(session)
         event_repo = AvailabilityEventRepository(session)
         history_repo = MetricHistoryRepository(session)
-        metric_defs = MetricDefinitionRepository(session).list_all()
+        definition_repo = MetricDefinitionRepository(session)
+        metric_defs = definition_repo.list_all()
         metric_defs_by_id = {m.id: m for m in metric_defs}
 
         due_devices = device_repo.list_due_for_poll(now)
@@ -115,6 +142,27 @@ async def run_collection_cycle() -> None:
                 history_repo,
                 metric_defs_by_id,
             )
+
+        # Métricas dinâmicas (walk) só fazem sentido pra quem respondeu no
+        # poll principal — pular device offline evita rodar vários walks
+        # contra um IP que já sabemos inalcançável neste ciclo.
+        online_ids = {r.device_id for r in results if r.online}
+        online_devices = [d for d in due_devices if d.id in online_ids]
+
+        dynamic_results = [
+            *await HostResourcesMetricsService().execute(online_devices),
+            *await PrinterMetricsService().execute(online_devices),
+        ]
+        dynamic_collected_at = datetime.now(UTC)
+        history_repo.save_many(
+            [
+                _build_dynamic_history(
+                    result.device_id, dynamic_collected_at, reading, definition_repo
+                )
+                for result in dynamic_results
+                for reading in result.readings
+            ]
+        )
 
 
 async def run_forever() -> None:
