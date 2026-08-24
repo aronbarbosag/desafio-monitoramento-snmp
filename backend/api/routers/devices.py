@@ -58,4 +58,5 @@ async def scan_devices(summary: ScanSummary = Depends(run_ip_and_snmp_scan)) -> 
         devices_found=summary.devices_found,
         devices_probed=summary.devices_probed,
         snmp_identified=summary.snmp_identified,
+        used_ping_sweep_fallback=summary.used_ping_sweep_fallback,
     )

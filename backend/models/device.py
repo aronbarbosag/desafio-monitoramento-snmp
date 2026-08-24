@@ -21,8 +21,14 @@ class Device(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     ip: Mapped[str] = mapped_column(String(15))
     # unique: identidade física do device — IP muda por DHCP, mac não. Evita
-    # que cada scan crie uma linha nova pro mesmo aparelho (ver upsert_many_by_mac).
-    mac: Mapped[str] = mapped_column(String(17), unique=True)
+    # que cada scan crie uma linha nova pro mesmo aparelho (ver
+    # DeviceRepository.upsert_many). Nullable: devices achados via
+    # PingSweepService (ICMP/L3, usado quando o ARP não tem acesso à LAN
+    # física — ex: dentro do Docker) não têm como saber o MAC; nesse caso o
+    # dedup cai pro IP dentro da mesma subnet. Postgres/SQLite não tratam
+    # múltiplos NULL como duplicata de UNIQUE, então vários devices sem mac
+    # convivem numa mesma tabela sem violar a constraint.
+    mac: Mapped[str | None] = mapped_column(String(17), unique=True, nullable=True)
     vendor: Mapped[str | None] = mapped_column(String(255), nullable=True)
     # Categoria do device (ex: "CELULAR", "SMART TV", "ROTEADOR") — nenhum
     # scan preenche isso automaticamente, é classificação manual do usuário.

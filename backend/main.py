@@ -2,11 +2,13 @@ import asyncio
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager, suppress
 
+import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.routers.analytics import router as analytics_router
 from api.routers.devices import router as devices_router
+from api.routers.network import router as network_router
 from composer.registry_history_housekeeping import run_forever as run_housekeeping_forever
 from composer.registry_metric_catalog import seed_metric_catalog
 from composer.registry_metrics_collection import run_forever as run_collection_forever
@@ -45,8 +47,13 @@ app.add_middleware(
 )
 app.include_router(devices_router)
 app.include_router(analytics_router)
+app.include_router(network_router)
 
 
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+if __name__ == "__main__":
+    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)

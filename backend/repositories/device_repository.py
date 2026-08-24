@@ -17,15 +17,25 @@ class DeviceRepository:
         self._session.flush()
         return devices
 
-    def upsert_many_by_mac(self, devices: list[Device]) -> list[Device]:
-        """Como save_many, mas casando por mac: se já existe um Device com
-        esse mac, atualiza ip/vendor/subnet_id (podem mudar por DHCP/troca de
-        rede) na linha existente em vez de criar uma nova — preserva
-        status/backoff/identidade SNMP. mac é a identidade física do
-        aparelho (IP não é, muda por DHCP)."""
+    def upsert_many(self, devices: list[Device]) -> list[Device]:
+        """Como save_many, mas casando por identidade: quando o device tem
+        mac (IpScanService/ARP), casa por mac — a identidade física do
+        aparelho (IP não é, muda por DHCP). Sem mac (PingSweepService/ICMP,
+        usado quando o ARP não enxerga a LAN física — ex: dentro do Docker),
+        casa por ip dentro da mesma subnet: best-effort, já que sem MAC não
+        há como reconhecer o mesmo aparelho depois de um DHCP renovar o IP.
+        Em ambos os casos, atualiza a linha existente em vez de criar uma
+        nova — preserva status/backoff/identidade SNMP."""
         result = []
         for incoming in devices:
-            existing = self._session.query(Device).filter_by(mac=incoming.mac).one_or_none()
+            if incoming.mac is not None:
+                existing = self._session.query(Device).filter_by(mac=incoming.mac).one_or_none()
+            else:
+                existing = (
+                    self._session.query(Device)
+                    .filter_by(ip=incoming.ip, subnet_id=incoming.subnet_id, mac=None)
+                    .one_or_none()
+                )
             if existing is None:
                 self._session.add(incoming)
                 result.append(incoming)

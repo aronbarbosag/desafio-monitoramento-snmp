@@ -10,7 +10,7 @@
 
 ```
 uv sync
-uv run uvicorn main:app --reload
+uv run main.py
 ```
 
 Copie `.env.example` pra `.env` e preencha `DATABASE_URL` com a **connection string do Session Pooler** do seu projeto Supabase (Project Settings → Database → Connection string → aba "Session pooler", porta 5432) — não a de conexão direta (`db.<project>.supabase.co`): ela só resolve por IPv6 hoje e falha em redes sem suporte IPv6 completo. O scheme precisa ser `postgresql+psycopg://` (driver psycopg3), não `postgresql://` puro.
@@ -23,15 +23,28 @@ docker compose up --build
 
 Sobe só a API (`app`), lendo o mesmo `backend/.env` — não há serviço de Postgres no `docker-compose.yml` porque o banco é o Supabase, externo.
 
-**Importante — descoberta de rede (ARP/IPSCAN) não funciona dentro do container.** `IpScanService` usa `scapy` pra mandar ARP bruto, o que exige acesso de camada 2 à LAN física. Isso não é uma limitação do Docker em si (em Linux bare metal funciona com `network_mode: host` + `cap_add: [NET_RAW, NET_ADMIN]`), mas no Docker Desktop (Windows/Mac) o container roda dentro de uma VM Linux virtualizada e nunca enxerga a placa de rede física real, mesmo com host networking.
+**Descoberta de rede (`POST /devices/scan`) dentro do container: funciona, mas sem MAC.**
+`IpScanService` usa ARP (camada 2), que exige acesso direto à LAN física — algo que um container normalmente não tem (no Docker Desktop, Windows/Mac, o container roda numa VM Linux virtualizada e nunca enxerga a placa de rede física real, mesmo com host networking). Quando o ARP não acha nenhum device, `run_ip_and_snmp_scan` cai automaticamente pro `PingSweepService` (ICMP, camada 3) — esse atravessa a bridge do Docker normalmente (NAT/roteamento comuns, sem exigir L2). A resposta do scan indica isso via `used_ping_sweep_fallback: true`; os devices achados nesse modo entram no banco com `mac: null` (`Device.mac` é opcional justamente pra isso — ver `models/device.py`).
 
-Padrão recomendado: rode o ARP fora do container, direto no host (onde `scapy` tem acesso real à LAN), agendado periodicamente:
+Rodando dentro do container, passe o CIDR da LAN física explicitamente — o autodetect enxerga só a rede virtual do container, não a do host:
+
+```
+curl -X POST "http://localhost:8000/devices/scan?subnet=192.168.1.0/24"
+```
+
+Sem `subnet`, o autodetect roda mesmo assim (útil pra ver o scan funcionando de ponta a ponta, só que sobre a rede virtual do Docker em vez da LAN física).
+
+Se preferir descoberta com MAC/fabricante completos, rode o ARP fora do container, direto no host (onde `scapy` tem acesso real à LAN), agendado periodicamente:
 
 ```
 DATABASE_URL=<mesma connection string do .env> uv run python composer/registry_devices.py
 ```
 
-Isso popula o Supabase com devices novos (ARP + SNMP). O container só faz SNMP/polling contra o que já está no banco (`run_forever`, que nunca chama ARP) — funciona normalmente de dentro do Docker, já que é tráfego UDP comum, sem exigir L2.
+O container também expõe `GET /network/ping-sweep` como diagnóstico isolado ("quem está de pé nessa subnet agora", sem tocar no cadastro de devices):
+
+```
+curl "http://localhost:8000/network/ping-sweep?subnet=192.168.1.0/24"
+```
 
 ## Rodando os testes
 

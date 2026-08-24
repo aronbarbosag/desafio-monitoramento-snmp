@@ -3,7 +3,7 @@ import type { DeviceStatus } from "../api/types";
 export const STATUS_LABEL: Record<DeviceStatus, string> = {
   online: "Online",
   offline: "Offline",
-  unknown: "Desconhecido",
+  unknown: "Unknown",
 };
 
 export function StatusBadge({ status }: { status: DeviceStatus }) {

@@ -35,7 +35,7 @@ async def run_forever() -> None:
     matar essa task pra sempre."""
     while True:
         try:
-            run_housekeeping_cycle()
+            await asyncio.to_thread(run_housekeeping_cycle)
         except Exception:
             logger.exception("run_housekeeping_cycle falhou; tentando de novo no próximo tick")
         await asyncio.sleep(TICK_INTERVAL_SECONDS)

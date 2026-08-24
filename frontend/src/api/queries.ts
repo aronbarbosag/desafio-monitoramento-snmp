@@ -7,7 +7,9 @@ export function useDevices() {
   return useQuery({
     queryKey: ["devices"],
     queryFn: apiClient.listDevices,
-    refetchInterval: DEVICES_REFETCH_MS,
+    retry: 1,
+    refetchInterval: (query) =>
+      query.state.status === "success" ? DEVICES_REFETCH_MS : false,
   });
 }
 
@@ -25,10 +27,27 @@ export function useDeviceEvents(id: number) {
   });
 }
 
+export function useDashboardSummary() {
+  return useQuery({
+    queryKey: ["dashboard", "summary"],
+    queryFn: apiClient.getDashboardSummary,
+    retry: 1,
+    refetchInterval: (query) =>
+      query.state.status === "success" ? DEVICES_REFETCH_MS : false,
+  });
+}
+
+export function useDeviceAvailability(id: number) {
+  return useQuery({
+    queryKey: ["devices", id, "availability"],
+    queryFn: () => apiClient.getDeviceAvailability(id),
+  });
+}
+
 export function useScanMutation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: apiClient.scanDevices,
+    mutationFn: (subnet?: string) => apiClient.scanDevices(subnet),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["devices"] });
     },

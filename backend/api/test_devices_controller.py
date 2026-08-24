@@ -172,6 +172,7 @@ def test_scan_route_returns_summary():
         "devices_found": 1,
         "devices_probed": 1,
         "snmp_identified": 1,
+        "used_ping_sweep_fallback": False,
     }
 
 
@@ -193,4 +194,5 @@ def test_scan_route_forwards_ipscan_query_param():
         "devices_found": 0,
         "devices_probed": 1,
         "snmp_identified": 1,
+        "used_ping_sweep_fallback": False,
     }

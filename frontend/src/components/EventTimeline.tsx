@@ -1,8 +1,8 @@
-import { parseApiDate } from "../api/dates";
+import { formatApiDate, parseApiDate } from "../api/dates";
 import type { AvailabilityEventOut } from "../api/types";
 import { StatusBadge } from "./StatusBadge";
 
-function formatDuration(ms: number): string {
+export function formatDuration(ms: number): string {
   const minutes = Math.floor(Math.max(0, ms) / 60_000);
   if (minutes < 60) return `${minutes} min`;
   const hours = Math.floor(minutes / 60);
@@ -11,24 +11,8 @@ function formatDuration(ms: number): string {
   return `${days}d ${hours % 24}h`;
 }
 
-export function computeUptimePercent(events: AvailabilityEventOut[]): number | null {
-  if (events.length === 0) return null;
-  const now = Date.now();
-  let onlineMs = 0;
-  let totalMs = 0;
-  for (const e of events) {
-    const start = parseApiDate(e.started_at).getTime();
-    const end = e.ended_at ? parseApiDate(e.ended_at).getTime() : now;
-    const duration = Math.max(0, end - start);
-    totalMs += duration;
-    if (e.status === "online") onlineMs += duration;
-  }
-  if (totalMs === 0) return null;
-  return (onlineMs / totalMs) * 100;
-}
-
 export function EventTimeline({ events }: { events: AvailabilityEventOut[] }) {
-  if (events.length === 0) return <p>Sem eventos de disponibilidade registrados.</p>;
+  if (events.length === 0) return <p>No availability events recorded.</p>;
 
   return (
     <ul className="event-timeline">
@@ -39,8 +23,8 @@ export function EventTimeline({ events }: { events: AvailabilityEventOut[] }) {
           <li key={e.id} className="event-timeline__item">
             <StatusBadge status={e.status} />
             <span>
-              {parseApiDate(e.started_at).toLocaleString()}
-              {e.ended_at ? ` → ${parseApiDate(e.ended_at).toLocaleString()}` : " → em curso"}
+              {formatApiDate(e.started_at)}
+              {e.ended_at ? ` → ${formatApiDate(e.ended_at)}` : " → in progress"}
             </span>
             <span className="event-timeline__duration">{formatDuration(end - start)}</span>
           </li>

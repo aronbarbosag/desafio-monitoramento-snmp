@@ -1,10 +1,11 @@
 import { useNavigate, useParams } from "react-router-dom";
-import { parseApiDate } from "../api/dates";
-import { useDeviceEvents, useDeviceHistory, useDevices } from "../api/queries";
+import { formatApiDate } from "../api/dates";
+import { useDeviceAvailability, useDeviceEvents, useDeviceHistory, useDevices } from "../api/queries";
 import type { MetricHistoryOut } from "../api/types";
 import { StatusBadge } from "../components/StatusBadge";
+import { KpiCard } from "../components/KpiCard";
 import { MetricCard } from "../components/MetricCard";
-import { EventTimeline, computeUptimePercent } from "../components/EventTimeline";
+import { EventTimeline, formatDuration } from "../components/EventTimeline";
 
 function groupByMetricKey(history: MetricHistoryOut[]): Record<string, MetricHistoryOut[]> {
   const groups: Record<string, MetricHistoryOut[]> = {};
@@ -25,85 +26,119 @@ export function DeviceDetailPage() {
   const devices = useDevices();
   const history = useDeviceHistory(deviceId);
   const events = useDeviceEvents(deviceId);
+  const availability = useDeviceAvailability(deviceId);
 
   const d = devices.data?.find((device) => device.id === deviceId);
-
-  if (devices.isLoading && !devices.data) return <p>Carregando device...</p>;
-  if (!d) {
-    if (devices.isError) {
-      return <p>Falha ao carregar device. Verifique a conexão com o servidor.</p>;
-    }
-    return <p>Device não encontrado.</p>;
-  }
+  // Mostra o botão de voltar desde o primeiro render — só o conteúdo (header,
+  // métricas, disponibilidade) fica pendente até a GET responder.
+  const pending = devices.isLoading && !devices.data;
 
   const groups = groupByMetricKey(history.data ?? []);
-  const uptimePercent = computeUptimePercent(events.data ?? []);
 
   return (
     <div className="page">
       <button className="btn btn-secondary" onClick={() => navigate("/")} style={{ alignSelf: "flex-start" }}>
-        ← Inventário
+        ← Inventory
       </button>
 
-      <header className="page-header">
-        <h1>{d.hostname ?? d.ip}</h1>
-        <StatusBadge status={d.status} />
-      </header>
+      {pending && <p>Loading device...</p>}
 
-      <table className="table">
-        <tbody>
-          <tr>
-            <td>IP</td>
-            <td>{d.ip}</td>
-          </tr>
-          <tr>
-            <td>MAC</td>
-            <td>{d.mac}</td>
-          </tr>
-          <tr>
-            <td>Vendor / modelo</td>
-            <td>{[d.vendor, d.model_name].filter(Boolean).join(" ") || "—"}</td>
-          </tr>
-          <tr>
-            <td>sysDescr</td>
-            <td>{d.sys_descr ?? "—"}</td>
-          </tr>
-          <tr>
-            <td>Contato</td>
-            <td>{d.sys_contact ?? "—"}</td>
-          </tr>
-          <tr>
-            <td>Localização</td>
-            <td>{d.sys_location ?? "—"}</td>
-          </tr>
-          <tr>
-            <td>Intervalo de poll</td>
-            <td>{d.poll_interval_seconds}s</td>
-          </tr>
-          <tr>
-            <td>Última checagem</td>
-            <td>{d.last_checked_at ? parseApiDate(d.last_checked_at).toLocaleString() : "—"}</td>
-          </tr>
-        </tbody>
-      </table>
+      {!pending && !d && (
+        <p>
+          {devices.isError
+            ? "Failed to load device. Check the server connection."
+            : "Device not found."}
+          {devices.isError && (
+            <button
+              className="btn btn-secondary"
+              style={{ marginLeft: "var(--space-4)" }}
+              onClick={() => devices.refetch()}
+              disabled={devices.isRefetching}
+            >
+              {devices.isRefetching ? "Retrying..." : "Retry"}
+            </button>
+          )}
+        </p>
+      )}
 
-      <section>
-        <h2>Métricas</h2>
-        {Object.keys(groups).length === 0 && <p>Sem histórico de métricas.</p>}
-        <div className="metric-grid">
-          {Object.entries(groups).map(([key, points]) => (
-            <MetricCard key={key} points={points} />
-          ))}
-        </div>
-      </section>
+      {d && (
+        <>
+          <header className="page-header">
+            <h1>{d.hostname ?? d.ip}</h1>
+            <StatusBadge status={d.status} />
+          </header>
 
-      <section>
-        <h2>
-          Disponibilidade
-          {uptimePercent !== null ? ` · ${uptimePercent.toFixed(1)}% online na janela retornada` : ""}
-        </h2>
-        <EventTimeline events={events.data ?? []} />
-      </section>
+          <table className="table">
+            <tbody>
+              <tr>
+                <td>IP</td>
+                <td>{d.ip}</td>
+              </tr>
+              <tr>
+                <td>MAC</td>
+                <td>{d.mac ?? "— (found via ping sweep, no ARP data)"}</td>
+              </tr>
+              <tr>
+                <td>Vendor / model</td>
+                <td>{[d.vendor, d.model_name].filter(Boolean).join(" ") || "—"}</td>
+              </tr>
+              <tr>
+                <td>sysDescr</td>
+                <td>{d.sys_descr ?? "—"}</td>
+              </tr>
+              <tr>
+                <td>Contact</td>
+                <td>{d.sys_contact ?? "—"}</td>
+              </tr>
+              <tr>
+                <td>Location</td>
+                <td>{d.sys_location ?? "—"}</td>
+              </tr>
+              <tr>
+                <td>Poll interval</td>
+                <td>{d.poll_interval_seconds}s</td>
+              </tr>
+              <tr>
+                <td>Last checked</td>
+                <td>{d.last_checked_at ? formatApiDate(d.last_checked_at) : "—"}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <section>
+            <h2>Metrics</h2>
+            {Object.keys(groups).length === 0 && <p>No metric history.</p>}
+            <div className="metric-grid">
+              {Object.entries(groups).map(([key, points]) => (
+                <MetricCard key={key} points={points} />
+              ))}
+            </div>
+          </section>
+
+          <section>
+            <h2>Availability (last {availability.data?.range_hours ?? 24}h)</h2>
+            <div className="kpi-grid">
+              <KpiCard
+                label="Availability"
+                value={availability.data ? `${availability.data.availability_pct.toFixed(1)}%` : "—"}
+              />
+              <KpiCard
+                label="Downtime"
+                value={availability.data ? formatDuration(availability.data.downtime_seconds * 1000) : "—"}
+              />
+              <KpiCard
+                label="MTTR"
+                value={
+                  availability.data?.mttr_seconds != null
+                    ? formatDuration(availability.data.mttr_seconds * 1000)
+                    : "—"
+                }
+              />
+            </div>
+            <EventTimeline events={events.data ?? []} />
+          </section>
+        </>
+      )}
     </div>
   );
 }

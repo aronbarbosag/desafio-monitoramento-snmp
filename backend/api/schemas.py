@@ -11,7 +11,7 @@ class DeviceOut(BaseModel):
 
     id: int
     ip: str
-    mac: str
+    mac: str | None
     vendor: str | None
     device_type: str | None
     hostname: str | None
@@ -68,6 +68,10 @@ class ScanResult(BaseModel):
     devices_found: int
     devices_probed: int
     snmp_identified: int
+    # True quando o ARP não achou nada (sem acesso L2 à LAN física — o caso
+    # comum de dentro do Docker) e o scan caiu pro PingSweepService (ICMP):
+    # devices_found nesse caso não tem MAC/fabricante, só IP.
+    used_ping_sweep_fallback: bool = False
 
 
 class ChartPoint(BaseModel):
@@ -104,6 +108,15 @@ class AvailabilitySummary(BaseModel):
     availability_pct: float
     downtime_seconds: int
     mttr_seconds: float | None
+
+
+class PingSweepResultOut(BaseModel):
+    """Saída de PingSweepService — quais IPs de uma subnet responderam ICMP.
+    Diagnóstico apenas: não identifica MAC, não cria/atualiza Device."""
+
+    subnet: str
+    checked: int
+    online: list[str]
 
 
 class DashboardSummary(BaseModel):

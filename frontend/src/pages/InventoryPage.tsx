@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useDevices } from "../api/queries";
+import { useDashboardSummary, useDevices } from "../api/queries";
 import type { DeviceStatus } from "../api/types";
 import { DeviceTable } from "../components/DeviceTable";
 import { KpiCard } from "../components/KpiCard";
@@ -10,7 +10,8 @@ import { STATUS_LABEL } from "../components/StatusBadge";
 const STATUS_OPTIONS: Array<DeviceStatus | "all"> = ["all", "online", "offline", "unknown"];
 
 export function InventoryPage() {
-  const { data: devices, isLoading, isError } = useDevices();
+  const { data: devices, isLoading, isError, refetch, isRefetching } = useDevices();
+  const dashboard = useDashboardSummary();
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [deviceType, setDeviceType] = useState("all");
@@ -48,48 +49,68 @@ export function InventoryPage() {
     };
   }, [devices]);
 
-  if (isLoading && !devices) return <p>Carregando devices...</p>;
-  if (isError && !devices) return <p>Falha ao carregar devices.</p>;
+  // Mostra a tela normal (header, filtros) desde o primeiro render — só a
+  // área de dados fica pendente até a GET responder. Nunca troca a página
+  // inteira por um texto de loading/erro.
+  const pending = isLoading && !devices;
 
   return (
     <div className="page">
       <header className="page-header">
-        <h1>Inventário de devices</h1>
+        <h1>Device inventory</h1>
         <ScanButton />
       </header>
 
-      {isError && devices && (
+      {isError && (
         <p className="banner banner--warning">
-          Sem conexão com o servidor — mostrando os últimos dados conhecidos.
+          {devices
+            ? "No connection to the server — showing the last known data."
+            : "Failed to load devices. Check that the backend is running."}
+          <button
+            className="btn btn-secondary"
+            style={{ marginLeft: "var(--space-4)" }}
+            onClick={() => refetch()}
+            disabled={isRefetching}
+          >
+            {isRefetching ? "Retrying..." : "Retry"}
+          </button>
         </p>
       )}
 
       <div className="kpi-grid">
-        <KpiCard label="Total" value={kpis.total} />
-        <KpiCard label="Online" value={kpis.online} />
-        <KpiCard label="Offline" value={kpis.offline} />
-        <KpiCard label="Desconhecido" value={kpis.unknown} />
-        <KpiCard label="SNMP habilitado" value={kpis.snmp} />
+        <KpiCard label="Total" value={pending ? "…" : kpis.total} />
+        <KpiCard label="Online" value={pending ? "…" : kpis.online} />
+        <KpiCard label="Offline" value={pending ? "…" : kpis.offline} />
+        <KpiCard label="Unknown" value={pending ? "…" : kpis.unknown} />
+        <KpiCard label="SNMP enabled" value={pending ? "…" : kpis.snmp} />
+        <KpiCard
+          label="Avg. availability (24h)"
+          value={dashboard.data ? `${dashboard.data.avg_availability_pct.toFixed(1)}%` : "—"}
+        />
+        <KpiCard
+          label="Open problems"
+          value={dashboard.data ? dashboard.data.open_problems : "—"}
+        />
       </div>
 
       <div className="filters">
         <input
           className="input"
-          placeholder="Buscar hostname ou IP"
+          placeholder="Search hostname or IP"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
         <select className="input" value={deviceType} onChange={(e) => setDeviceType(e.target.value)}>
           {deviceTypes.map((t) => (
             <option key={t} value={t}>
-              {t === "all" ? "Todos os tipos" : t}
+              {t === "all" ? "All types" : t}
             </option>
           ))}
         </select>
         <select className="input" value={vendor} onChange={(e) => setVendor(e.target.value)}>
           {vendors.map((v) => (
             <option key={v} value={v}>
-              {v === "all" ? "Todos os vendors" : v}
+              {v === "all" ? "All vendors" : v}
             </option>
           ))}
         </select>
@@ -100,13 +121,17 @@ export function InventoryPage() {
         >
           {STATUS_OPTIONS.map((s) => (
             <option key={s} value={s}>
-              {s === "all" ? "Todos os status" : STATUS_LABEL[s]}
+              {s === "all" ? "All statuses" : STATUS_LABEL[s]}
             </option>
           ))}
         </select>
       </div>
 
-      <DeviceTable devices={filtered} onSelect={(id) => navigate(`/devices/${id}`)} />
+      {pending ? (
+        <p>Loading devices...</p>
+      ) : (
+        <DeviceTable devices={filtered} onSelect={(id) => navigate(`/devices/${id}`)} />
+      )}
     </div>
   );
 }

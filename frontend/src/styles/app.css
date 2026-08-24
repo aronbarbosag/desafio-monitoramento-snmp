@@ -89,6 +89,11 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.scan-button__subnet {
+  width: 220px;
 }
 
 .scan-result {
@@ -110,6 +115,15 @@
   background: oklch(0.9 0.09 85 / 0.35);
   border: 1px solid oklch(0.7 0.14 70);
   color: oklch(0.4 0.12 70);
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.table__empty {
+  text-align: center;
+  padding: var(--space-6);
+  color: color-mix(in srgb, var(--color-text) 55%, transparent);
 }
 
 .status-badge {

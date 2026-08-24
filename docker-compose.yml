@@ -7,3 +7,11 @@ services:
     env_file:
       - ./backend/.env
     restart: unless-stopped
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - app
+    restart: unless-stopped

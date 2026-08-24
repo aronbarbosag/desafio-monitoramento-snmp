@@ -1,4 +1,11 @@
-import type { AvailabilityEventOut, DeviceOut, MetricHistoryOut, ScanResult } from "./types";
+import type {
+  AvailabilityEventOut,
+  AvailabilitySummaryOut,
+  DashboardSummaryOut,
+  DeviceOut,
+  MetricHistoryOut,
+  ScanResult,
+} from "./types";
 
 const BASE_URL = import.meta.env.VITE_API_URL || "/api";
 const DEFAULT_LIST_LIMIT = 100;
@@ -28,5 +35,12 @@ export const apiClient = {
     request<MetricHistoryOut[]>(`/devices/${id}/history?limit=${limit}`),
   getDeviceEvents: (id: number, limit = DEFAULT_LIST_LIMIT) =>
     request<AvailabilityEventOut[]>(`/devices/${id}/events?limit=${limit}`),
-  scanDevices: () => request<ScanResult>("/devices/scan", { method: "POST" }),
+  scanDevices: (subnet?: string) =>
+    request<ScanResult>(
+      `/devices/scan${subnet ? `?subnet=${encodeURIComponent(subnet)}` : ""}`,
+      { method: "POST" },
+    ),
+  getDashboardSummary: () => request<DashboardSummaryOut>("/dashboard/summary"),
+  getDeviceAvailability: (id: number) =>
+    request<AvailabilitySummaryOut>(`/devices/${id}/availability`),
 };

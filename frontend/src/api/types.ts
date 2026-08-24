@@ -4,7 +4,9 @@ export type MetricValueType = "integer" | "counter" | "gauge" | "string";
 export interface DeviceOut {
   id: number;
   ip: string;
-  mac: string;
+  // Ausente quando o device foi achado via ping sweep (ICMP) em vez de ARP —
+  // caso comum ao rodar dentro do Docker, sem acesso L2 à LAN física.
+  mac: string | null;
   vendor: string | null;
   device_type: string | null;
   hostname: string | null;
@@ -43,4 +45,25 @@ export interface ScanResult {
   devices_found: number;
   devices_probed: number;
   snmp_identified: number;
+  // true quando o ARP não achou nada (ex: dentro do Docker) e o scan caiu
+  // pro ping sweep (ICMP) — devices_found nesse caso não tem MAC/vendor.
+  used_ping_sweep_fallback: boolean;
+}
+
+export interface DashboardSummaryOut {
+  total_devices: number;
+  online: number;
+  offline: number;
+  unknown: number;
+  snmp_supported: number;
+  avg_availability_pct: number;
+  open_problems: number;
+}
+
+export interface AvailabilitySummaryOut {
+  device_id: number;
+  range_hours: number;
+  availability_pct: number;
+  downtime_seconds: number;
+  mttr_seconds: number | null;
 }

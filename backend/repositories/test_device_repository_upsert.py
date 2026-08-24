@@ -1,5 +1,5 @@
 """
-Testes de upsert_many_by_mac() contra um Postgres real descartável (ver
+Testes de upsert_many() contra um Postgres real descartável (ver
 conftest.py) — sem mocks.
 """
 
@@ -21,11 +21,11 @@ def test_upsert_by_mac_updates_existing_device_instead_of_duplicating():
         subnet_id = _seed_subnet(session)
         repo = DeviceRepository(session)
 
-        first_id = repo.upsert_many_by_mac(
+        first_id = repo.upsert_many(
             [Device(ip="10.0.0.1", mac="aa:bb:cc:dd:ee:ff", vendor="Acme", subnet_id=subnet_id)]
         )[0].id
 
-        second = repo.upsert_many_by_mac(
+        second = repo.upsert_many(
             [Device(ip="10.0.0.2", mac="aa:bb:cc:dd:ee:ff", vendor="Acme", subnet_id=subnet_id)]
         )[0]
         second_id, second_ip = second.id, second.ip
@@ -42,12 +42,8 @@ def test_upsert_by_mac_inserts_new_device_when_mac_is_unseen():
         subnet_id = _seed_subnet(session)
         repo = DeviceRepository(session)
 
-        repo.upsert_many_by_mac(
-            [Device(ip="10.0.0.1", mac="aa:bb:cc:dd:ee:01", subnet_id=subnet_id)]
-        )
-        repo.upsert_many_by_mac(
-            [Device(ip="10.0.0.2", mac="aa:bb:cc:dd:ee:02", subnet_id=subnet_id)]
-        )
+        repo.upsert_many([Device(ip="10.0.0.1", mac="aa:bb:cc:dd:ee:01", subnet_id=subnet_id)])
+        repo.upsert_many([Device(ip="10.0.0.2", mac="aa:bb:cc:dd:ee:02", subnet_id=subnet_id)])
 
         macs = {d.mac for d in repo.list_all()}
 
@@ -59,7 +55,7 @@ def test_upsert_by_mac_preserves_status_and_polling_state_on_update():
         subnet_id = _seed_subnet(session)
         repo = DeviceRepository(session)
 
-        device_id = repo.upsert_many_by_mac(
+        device_id = repo.upsert_many(
             [Device(ip="10.0.0.1", mac="aa:bb:cc:dd:ee:ff", subnet_id=subnet_id)]
         )[0].id
         checked_at = datetime.now(UTC)
@@ -72,10 +68,42 @@ def test_upsert_by_mac_preserves_status_and_polling_state_on_update():
             last_checked_at=checked_at,
         )
 
-        updated = repo.upsert_many_by_mac(
+        updated = repo.upsert_many(
             [Device(ip="10.0.0.9", mac="aa:bb:cc:dd:ee:ff", subnet_id=subnet_id)]
         )[0]
         updated_status, updated_checked_at = updated.status, updated.last_checked_at
 
     assert updated_status == DeviceStatus.ONLINE
     assert updated_checked_at.replace(tzinfo=UTC) == checked_at
+
+
+def test_upsert_without_mac_inserts_each_distinct_ip_separately():
+    """PingSweepService (ICMP) não enxerga MAC — vários devices com mac=None
+    não podem casar entre si por mac (NULL != NULL em SQL); o dedup cai pro
+    ip dentro da subnet, então IPs distintos viram linhas distintas."""
+    with db_connection_handler.get_session() as session:
+        subnet_id = _seed_subnet(session)
+        repo = DeviceRepository(session)
+
+        repo.upsert_many([Device(ip="10.0.0.1", subnet_id=subnet_id)])
+        repo.upsert_many([Device(ip="10.0.0.2", subnet_id=subnet_id)])
+
+        ips = {d.ip for d in repo.list_all()}
+
+    assert ips == {"10.0.0.1", "10.0.0.2"}
+
+
+def test_upsert_without_mac_updates_existing_device_by_ip_instead_of_duplicating():
+    with db_connection_handler.get_session() as session:
+        subnet_id = _seed_subnet(session)
+        repo = DeviceRepository(session)
+
+        first_id = repo.upsert_many([Device(ip="10.0.0.1", subnet_id=subnet_id)])[0].id
+        second_id = repo.upsert_many([Device(ip="10.0.0.1", vendor=None, subnet_id=subnet_id)])[
+            0
+        ].id
+
+        all_ids = [d.id for d in repo.list_all()]
+
+    assert second_id == first_id
+    assert all_ids == [first_id]
