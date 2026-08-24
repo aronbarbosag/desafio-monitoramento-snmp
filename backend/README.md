@@ -13,6 +13,15 @@ uv sync
 uv run main.py
 ```
 
+Sem `uv`? Também tem `requirements.txt` (gerado a partir do `uv.lock` via `uv export`) pra quem só usa `pip`:
+
+```
+python -m venv .venv
+.venv\Scripts\activate  # Linux/Mac: source .venv/bin/activate
+pip install -r requirements.txt
+python main.py
+```
+
 Copie `.env.example` pra `.env` e preencha `DATABASE_URL` com a **connection string do Session Pooler** do seu projeto Supabase (Project Settings → Database → Connection string → aba "Session pooler", porta 5432) — não a de conexão direta (`db.<project>.supabase.co`): ela só resolve por IPv6 hoje e falha em redes sem suporte IPv6 completo. O scheme precisa ser `postgresql+psycopg://` (driver psycopg3), não `postgresql://` puro.
 
 ## Rodando via Docker
