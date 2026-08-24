@@ -21,6 +21,14 @@ Monorepo: [`backend/`](backend/README.md) (FastAPI + SQLAlchemy + pandas) e
 
 ---
 
+## Screenshots
+
+| Inventário de devices | Detalhe do device |
+|---|---|
+| ![Inventário de devices](docs/screenshot-inventory.png) | ![Detalhe do device](docs/screenshot-device.png) |
+
+---
+
 ## Arquitetura & Fluxo de Dados
 
 ![Arquitetura do projeto](docs/architecture.png)
@@ -153,6 +161,6 @@ na LAN ficam `skip` sem `SNMP_TEST_TARGET` configurado — ver
 .
 ├── backend/     # API FastAPI, ETL, coleta SNMP/ARP — ver backend/README.md
 ├── frontend/    # SPA React (Vite) — ver frontend/README.md
-├── docs/        # Diagrama de arquitetura (.excalidraw + .png)
+├── docs/        # Diagrama de arquitetura (.excalidraw + .png) e screenshots
 └── docker-compose.yml
 ```
